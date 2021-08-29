@@ -22,7 +22,7 @@ val prog =
 fun maxargs (CompoundStm(stm1,stm2)) = Int.max(maxargs stm1, maxargs stm2)
   | maxargs (AssignStm(_,exp)) = maxargsExp exp
   | maxargs (PrintStm explist) =
-      List.foldl Int.max (length explist) (List.map maxargsExp explist)
+      foldl Int.max (length explist) (map maxargsExp explist)
 
 and maxargsExp (OpExp(exp1,_,exp2)) = Int.max(maxargsExp exp1, maxargsExp exp2)
   | maxargsExp (EseqExp(stm,exp))   = Int.max(maxargs stm, maxargsExp exp)
