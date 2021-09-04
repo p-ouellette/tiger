@@ -11,7 +11,7 @@
   | BREAK | NIL
   | FUNCTION | VAR | TYPE 
 
-%nonterm  exp | program
+%nonterm program | exp | lvalue | exps | args
 
 %pos int
 %verbose
@@ -34,5 +34,22 @@
 
 program	: exp				()
 
-	
-exp: 			()
+exp : lvalue				()
+    | NIL				()
+    | LPAREN exps RPAREN		()
+    | LPAREN RPAREN			()
+    | INT				()
+    | STRING				()
+    | MINUS INT				()
+    | ID RPAREN LPAREN			()
+    | ID RPAREN args LPAREN		()
+
+lvalue : ID				()
+       | lvalue DOT ID			()
+       | lvalue LBRACK exp RBRACK	()
+
+exps : exp				()
+     | exp SEMICOLON exps		()
+
+args : exp				()
+     | exp COMMA exps			()

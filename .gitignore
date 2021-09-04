@@ -1,2 +1,5 @@
 .cm
-chap2/tiger.lex.sml
+tiger.lex.sml
+tiger.grm.desc
+tiger.grm.sig
+tiger.grm.sml
