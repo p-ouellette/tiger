@@ -5,13 +5,14 @@
   | INT of int | STRING of string 
   | COMMA | COLON | SEMICOLON | LPAREN | RPAREN | LBRACK | RBRACK 
   | LBRACE | RBRACE | DOT 
-  | PLUS | MINUS | TIMES | DIVIDE | EQ | NEQ | LT | LE | GT | GE
+  | PLUS | MINUS | TIMES | DIVIDE | EQ | NEQ | LT | LE | GT | GE | UMINUS
   | AND | OR | ASSIGN
   | ARRAY | IF | THEN | ELSE | WHILE | FOR | TO | DO | LET | IN | END | OF 
   | BREAK | NIL
-  | FUNCTION | VAR | TYPE 
+  | FUNCTION | VAR | TYPE
 
-%nonterm program | exp | lvalue | exps | args
+%nonterm program | exp | lvalue | exps | exps_empty | args | fields | field
+  | decs | dec | tydec | ty | tyfields | tyfields_empty | vardec | fundec
 
 %pos int
 %verbose
@@ -21,7 +22,16 @@
 
 %name Tiger
 
-%keyword WHILE FOR TO BREAK LET IN END FUNCTION VAR TYPE ARRAY IF THEN ELSE 
+%right OF THEN ELSE DO
+%left ASSIGN
+%left OR
+%left AND
+%nonassoc EQ NEQ GT LT GE LE
+%left PLUS MINUS
+%left TIMES DIVIDE
+%left UMINUS
+
+%keyword WHILE FOR TO BREAK LET IN END FUNCTION VAR TYPE ARRAY IF THEN ELSE
 	DO OF NIL
 
 %prefer THEN ELSE LPAREN
@@ -36,20 +46,75 @@ program	: exp				()
 
 exp : lvalue				()
     | NIL				()
-    | LPAREN exps RPAREN		()
-    | LPAREN RPAREN			()
+    | LPAREN exps_empty RPAREN		()
     | INT				()
     | STRING				()
-    | MINUS INT				()
-    | ID RPAREN LPAREN			()
-    | ID RPAREN args LPAREN		()
+    | MINUS exp	 %prec UMINUS		()
+    | ID LPAREN RPAREN			()
+    | ID LPAREN args RPAREN		()
+    | exp PLUS exp			()
+    | exp MINUS exp			()
+    | exp TIMES exp			()
+    | exp DIVIDE exp			()
+    | exp EQ exp			()
+    | exp NEQ exp			()
+    | exp GT exp			()
+    | exp LT exp			()
+    | exp GE exp			()
+    | exp LE exp			()
+    | exp AND exp			()
+    | exp OR exp			()
+    | ID LBRACE RBRACE			()
+    | ID LBRACE fields RBRACE		()
+    | ID LBRACK exp RBRACK OF exp	()
+    | lvalue ASSIGN exp			()
+    | IF exp THEN exp ELSE exp		()
+    | IF exp THEN exp			()
+    | WHILE exp DO exp			()
+    | FOR ID ASSIGN exp TO exp DO exp	()
+    | BREAK				()
+    | LET decs IN exps_empty END	()
 
 lvalue : ID				()
+       | ID LBRACK exp RBRACK		()
        | lvalue DOT ID			()
        | lvalue LBRACK exp RBRACK	()
 
 exps : exp				()
      | exp SEMICOLON exps		()
 
+exps_empty :				()
+	   | exps			()
+
 args : exp				()
-     | exp COMMA exps			()
+     | exp COMMA args			()
+
+fields : field				()
+       | field COMMA fields		()
+
+field : ID EQ exp			()
+
+decs :					()
+     | decs dec				()
+
+dec : tydec				()
+    | vardec				()
+    | fundec				()
+
+tydec : TYPE ID EQ ty			()
+
+ty : ID					()
+   | LBRACE tyfields_empty RBRACE	()
+   | ARRAY OF ID			()
+
+tyfields : ID COLON ID			()
+	 | tyfields COMMA ID COLON ID	()
+
+tyfields_empty :			()
+	       | tyfields		()
+
+vardec : VAR ID ASSIGN exp		()
+       | VAR ID COLON ID ASSIGN exp	()
+
+fundec : FUNCTION ID LPAREN tyfields_empty RPAREN EQ exp ()
+       | FUNCTION ID LPAREN tyfields_empty RPAREN COLON ID EQ exp ()
