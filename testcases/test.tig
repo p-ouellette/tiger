@@ -1,11 +1,21 @@
-(ord("a")-97;
- substring(9, "hi");
- prin("hi");
- 5=4;
- 3-nil;
- nil=nil;
- "foo"<>5;
- foo>3;
- print.hi;
- bar[5];
- 5>"foo")
+let
+  var foo := nil
+  var foo := 5
+  var nothing := print("hi")
+  var bar:int := 5
+  var bar:string := "hi"
+  var bar:int := nil
+  var bar:real := 8
+in
+  (ord("a")-97;
+   substring(9, "hi");
+   prin("hi");
+   5=4;
+   3-nil;
+   nil=nil;
+   "foo"<>5;
+   foo>3;
+   print.hi;
+   bar[5];
+   5>"foo")
+end
