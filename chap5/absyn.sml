@@ -4,8 +4,8 @@ struct
 type pos = int   and   symbol = Symbol.symbol
 
 datatype var = SimpleVar of symbol * pos
-            | FieldVar of var * symbol * pos
-            | SubscriptVar of var * exp * pos
+             | FieldVar of var * symbol * pos
+             | SubscriptVar of var * exp * pos
 
 and exp = VarExp of var
         | NilExp
@@ -49,4 +49,3 @@ withtype field = {name: symbol, escape: bool ref,
 		   pos: pos}
      
 end
-        

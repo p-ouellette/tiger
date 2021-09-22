@@ -1,7 +1,7 @@
 structure Main :
   sig
     val parse : string -> Absyn.exp
-    val translate : string -> unit
+    val translate : string -> Types.ty
   end =
 struct 
   structure TigerLrVals = TigerLrValsFun(structure Token = LrParser.Token)
