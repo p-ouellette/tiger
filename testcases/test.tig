@@ -6,6 +6,11 @@ let
   var bar:string := "hi"
   var bar:int := nil
   var bar:real := 8
+  type str = string
+  type b = bool
+  var a:str := chr(97)
+  type person = {name: str, age: int}
+  type people = array of person
 in
   (ord("a")-97;
    substring(9, "hi");

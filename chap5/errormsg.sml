@@ -39,7 +39,7 @@ struct
        in anyErrors := true;
 	  print (!fileName);
 	  look(!linePos,!lineNum);
-	  print ":";
+	  print ": ";
 	  print msg;
 	  print "\n"
       end
