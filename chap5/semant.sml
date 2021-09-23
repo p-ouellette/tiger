@@ -52,7 +52,7 @@ struct
            of SOME ty => ty
             | NONE => (error pos ("undefined type " ^ S.name id); T.INT))
 
-  fun transProg exp = #ty(transExp(E.base_venv, E.base_tenv) exp)
+  fun transProg exp = #ty(transExp(E.baseVenv, E.baseTenv) exp)
 
   and transExp (venv, tenv) = let
         fun trexp (A.VarExp var)  = trvar var
