@@ -11,6 +11,8 @@ let
   var a:str := chr(97)
   type person = {name: str, age: int}
   type people = array of person
+  function f(a: int, b: int): int = a + b
+  function g(a: real) = ()
 in
   (ord("a")-97;
    substring(9, "hi");
@@ -22,5 +24,7 @@ in
    foo>3;
    print.hi;
    bar[5];
-   5>"foo")
+   5>"foo";
+   f(5, "4");
+   f(1, 2))
 end

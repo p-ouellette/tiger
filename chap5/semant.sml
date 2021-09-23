@@ -144,6 +144,28 @@ struct
                tenv=S.enter(tenv, name, transTy(tenv,ty))}
          in foldl trdec {venv=venv, tenv=tenv} decs
         end
+    | transDec (venv, tenv, A.FunctionDec decs) = let
+        fun trdec ({name,params,result,body,pos}, {venv,tenv}) = let
+              fun trparam {name,typ,pos,escape=_} =
+                    {name=name, ty=lookupTy(tenv, typ, pos)}
+              val params' = map trparam params
+              val resultTy = case result
+                                of SOME(ty,pos) => lookupTy(tenv, ty, pos)
+                                 | NONE => T.UNIT
+              val venv' = S.enter(venv, name, E.FunEntry{formals=map #ty params',
+                                                         result=resultTy})
+              fun enterParam ({name,ty}, venv) =
+                    S.enter(venv, name, E.VarEntry{ty=ty})
+              val venv'' = foldl enterParam venv' params'
+              val {ty=bodyTy,...} = transExp(venv'', tenv) body
+              in
+                if not(tyMatches(bodyTy, resultTy)) then
+                  error pos "function body type does not match result type"
+                else ();
+                {venv=venv', tenv=tenv}
+              end
+         in foldl trdec {venv=venv, tenv=tenv} decs
+        end
 
   and transTy (tenv, A.NameTy(id,pos)) = lookupTy(tenv, id, pos)
     | transTy (tenv, A.RecordTy fields) = let
