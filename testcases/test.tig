@@ -5,7 +5,7 @@ let
   var bar:int := 5
   var bar:string := "hi"
   var bar:int := nil
-  var bar:real := 8
+  var bar:real := (8*8)/"2"
   type str = string
   type b = bool
   var a:str := chr(97)
@@ -13,6 +13,21 @@ let
   type people = array of person
   function f(a: int, b: int): int = a + b
   function g(a: real) = ()
+  var bob := person {name="bob", age=9}
+  var age := bob.age
+  var age := bob.a
+  var p := person {name="bob"}
+  var p := person {name="bob", age="9"}
+  var p := person {title="bob", age=9}
+  var p := per {name="bob"}
+  var a := if foo > bar then foo else bar
+  var a := if "x" then 5
+  var a := if 5+5=10 then "good" else -1
+  var b := (for i := 97 to 100 do (break; print(chr(i))); 1)
+  var arr := intarray[3] of nil
+  var arr := people["3"] of 2
+  var arr := people[3] of nil
+  function h() = while 1 do let function g() = break in break end
 in
   (ord("a")-97;
    substring(9, "hi");
@@ -26,5 +41,9 @@ in
    bar[5];
    5>"foo";
    f(5, "4");
-   f(1, 2))
+   f(1, 2);
+   if 1 then ();
+   while 1 do ();
+   break;
+   arr[0] := bob)
 end

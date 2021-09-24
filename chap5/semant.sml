@@ -22,15 +22,15 @@ struct
     fun checkArith (T.INT, T.INT,_) = T.INT
       | checkArith (_, _, pos) = (error pos "integer required"; T.INT)
 
-    fun checkEq (T.NIL, T.RECORD a, _) = T.RECORD a
-      | checkEq (T.RECORD a, T.NIL, _) = T.RECORD a
+    fun checkEq (T.NIL, T.RECORD _, _) = T.INT
+      | checkEq (T.RECORD _, T.NIL, _) = T.INT
       | checkEq (T.NIL, T.NIL, pos) =
           (error pos "cannot determine type of nil"; T.INT)
       | checkEq (a, b, pos) =
-          if a = b then a else (error pos "type mismatch"; T.INT)
+          (if a <> b then error pos "type mismatch" else (); T.INT)
 
     fun checkOrd (T.INT, T.INT, _)       = T.INT
-      | checkOrd (T.STRING, T.STRING, _) = T.STRING
+      | checkOrd (T.STRING, T.STRING, _) = T.INT
       | checkOrd (_, _, pos) = (error pos "invalid comparison"; T.INT)
   in
     fun checkOp A.PlusOp   = checkArith
@@ -52,9 +52,9 @@ struct
            of SOME ty => ty
             | NONE => (error pos ("undefined type " ^ S.name id); T.INT))
 
-  fun transProg exp = #ty(transExp(E.baseVenv, E.baseTenv) exp)
+  fun transProg exp = #ty(transExp(E.baseVenv, E.baseTenv, false) exp)
 
-  and transExp (venv, tenv) = let
+  and transExp (venv, tenv, inLoop) = let
         fun trexp (A.VarExp var)  = trvar var
           | trexp (A.NilExp)      = {exp=(), ty=T.NIL}
           | trexp (A.IntExp _)    = {exp=(), ty=T.INT}
@@ -79,19 +79,123 @@ struct
                   | _ => (error pos ("undefined function " ^ S.name func);
                           {exp=(), ty=T.INT}))
           | trexp (A.OpExp{left,oper,right,pos}) = let
-              val {ty=tyl,...} = trexp left
-              val {ty=tyr,...} = trexp right
-               in {exp=(), ty=checkOp oper (tyl, tyr, pos)}
+              val {ty=lt,...} = trexp left
+              val {ty=rt,...} = trexp right
+               in {exp=(), ty=checkOp oper (lt, rt, pos)}
               end
-          (*| trexp (A.RecordExp{fields,typ}) =*)
+          | trexp (A.RecordExp{fields,typ,pos}) =
+              (case lookupTy(tenv, typ, pos)
+                 of ty as T.RECORD(tyfields, _) => let
+                      fun validField((id:S.symbol,exp,_), (id',ty)) =
+                            id = id' andalso tyMatches(#ty(trexp exp), ty)
+                      in
+                        if length fields <> length tyfields orelse
+                            not(ListPair.all validField (fields, tyfields))
+                        then
+                          error pos "invalid record expression"
+                        else ();
+                        {exp=(), ty=ty}
+                      end
+                  | _ => (error pos (S.name typ ^ " is not a record type");
+                          {exp=(), ty=T.INT}))
+          | trexp (A.ArrayExp{typ,size,init,pos}) =
+              (case lookupTy(tenv, typ, pos)
+                 of ty as T.ARRAY(elemTy, _) => let
+                      val {ty=sizeTy,...} = trexp size
+                      val {ty=initTy,...} = trexp init
+                      in
+                        if sizeTy <> T.INT then
+                          error pos "array size is not of type int"
+                        else ();
+                        if not(tyMatches(initTy, elemTy)) then
+                          error pos ("array init expression does not match " ^
+                                     "element type")
+                        else ();
+                        {exp=(), ty=ty}
+                      end
+                  | _ => (error pos (S.name typ ^ " is not an array type");
+                          {exp=(), ty=T.INT}))
           | trexp (A.SeqExp exps) = let
               val ty = foldl (fn ((e,_),_) => #ty(trexp e)) T.UNIT exps
                in {exp=(), ty=ty}
               end
+          | trexp (A.AssignExp{var,exp,pos}) = let
+              val {ty=lt,...} = trvar var
+              val {ty=rt,...} = trexp exp
+              in
+                if not(tyMatches(rt, lt)) then
+                  error pos "type mismatch"
+                else ();
+                {exp=(), ty=T.UNIT}
+              end
+          | trexp (A.IfExp{test,then',else'=NONE,pos}) = let
+              val {ty=testTy,...} = trexp test
+              val {ty=thenTy,...} = trexp then'
+              in
+                if testTy <> T.INT then
+                  error pos "test expression in if is not of type int"
+                else ();
+                if thenTy <> T.UNIT then
+                  error pos "then-expression must produce no value"
+                else ();
+                {exp=(), ty=T.UNIT}
+              end
+          | trexp (A.IfExp{test,then',else'=SOME(else'),pos}) = let
+              val {ty=testTy,...} = trexp test
+              val {ty=thenTy,...} = trexp then'
+              val {ty=elseTy,...} = trexp else'
+              val ty =
+                (case (thenTy, elseTy)
+                   of (T.NIL, T.RECORD _) => elseTy
+                    | (T.RECORD _, T.NIL) => thenTy
+                    | (a, b) =>
+                        if a = b then a else
+                          (error pos "types of if branches do not agree";
+                           T.INT))
+              in
+                if testTy <> T.INT then
+                  error pos "test expression in if is not of type int"
+                else ();
+                {exp=(), ty=ty}
+              end
+          | trexp (A.WhileExp{test,body,pos}) = let
+              val {ty=testTy,...} = trexp test
+              val {ty=bodyTy,...} = transExp(venv, tenv, true) body
+              in
+                if testTy <> T.INT then
+                  error pos "test expression in while is not of type int"
+                else ();
+                if bodyTy <> T.UNIT then
+                  error pos "while body must produce no value"
+                else ();
+                {exp=(), ty=T.UNIT}
+              end
+          | trexp (A.ForExp{var,lo,hi,body,pos,...}) = let
+              val venv' = S.enter(venv, var, E.VarEntry{ty=T.INT})
+              val {ty=loTy,...} = trexp lo
+              val {ty=hiTy,...} = trexp hi
+              val {ty=bodyTy,...} = transExp(venv', tenv, true) body
+              in
+                if loTy <> T.INT then
+                  error pos "lower bound in for is not of type int"
+                else ();
+                if hiTy <> T.INT then
+                  error pos "upper bound in for is not of type int"
+                else ();
+                if bodyTy <> T.UNIT then
+                  error pos "for body must produce no value"
+                else ();
+                {exp=(), ty=T.UNIT}
+              end
+          | trexp (A.BreakExp pos) =
+              (if not(inLoop) then
+                 error pos "break outside loop"
+               else ();
+               {exp=(), ty=T.UNIT})
           | trexp (A.LetExp{decs,body,pos}) = let
-              fun trdec (dec, {venv,tenv}) = transDec(venv, tenv, dec)
+              fun trdec (dec, {venv,tenv}) = transDec(venv, tenv, dec, inLoop)
               val {venv=venv',tenv=tenv'} = foldl trdec {venv=venv,tenv=tenv} decs
-               in transExp(venv', tenv') body
+               in transExp(venv', tenv', inLoop) body
               end
 
         and trvar (A.SimpleVar(id,pos)) =
@@ -99,8 +203,8 @@ struct
                  of SOME(E.VarEntry{ty}) => {exp=(), ty=actualTy ty}
                   | _ => (error pos ("undefined variable " ^ S.name id);
                           {exp=(), ty=T.INT}))
-          | trvar (A.FieldVar(v,id,pos)) =
-              (case trvar v
+          | trvar (A.FieldVar(var,id,pos)) =
+              (case trvar var
                  of {ty=T.RECORD(fields,_),...} =>
                       (case List.find (fn (id',_) => id = id') fields
                          of SOME(_,ty) => {exp=(), ty=ty}
@@ -108,43 +212,40 @@ struct
                                      {exp=(), ty=T.INT}))
                   | _ => (error pos "attempt to select field of non-record value";
                           {exp=(), ty=T.INT}))
-          | trvar (A.SubscriptVar(v,exp,pos)) =
-              (case trvar v
+          | trvar (A.SubscriptVar(var,exp,pos)) =
+              (case trvar var
                  of {ty=T.ARRAY(ty,_),...} => {exp=(), ty=ty}
                   | _ => (error pos "attempt to subscript non-array value";
                           {exp=(), ty=T.INT}))
          in trexp
         end
 
-  and transDec (venv, tenv, A.VarDec{name,typ=NONE,init,pos,...}) = let
-        val {ty,...} = transExp(venv, tenv) init
-        in
-          case ty
-            of T.NIL  => (error pos "unconstrained nil";
-                          {tenv=tenv, venv=venv})
-             | T.UNIT => (error pos "cannot assign valueless expression";
-                          {tenv=tenv, venv=venv})
-             | _      => {tenv=tenv,
-                          venv=S.enter(venv, name, E.VarEntry{ty=ty})}
+  and transDec (venv, tenv, A.VarDec{name,typ,init,pos,...}, inLoop) = let
+        val {ty=initTy,...} = transExp(venv, tenv, inLoop) init
+        val ty = 
+          case (typ, initTy)
+            of (NONE, T.NIL)  => (error pos "unconstrained nil"; T.INT)
+             | (NONE, T.UNIT) => (error pos "cannot assign valueless expression";
+                                  T.INT)
+             | (NONE, _)      => initTy
+             | (SOME(tyid,typos), _) => let
+                 val ty = lookupTy(tenv, tyid, typos)
+                 in
+                   if not(tyMatches(initTy, ty)) then
+                     error pos "expression does not match type constraint"
+                   else ();
+                   ty
+                 end
+         in {tenv=tenv,
+             venv=S.enter(venv, name, E.VarEntry{ty=ty})}
         end
-    | transDec (venv, tenv, A.VarDec{name,typ=SOME(tyid,typos),init,pos,...}) =
-        let
-          val {ty,...} = transExp(venv, tenv) init
-          val ty' = lookupTy(tenv, tyid, typos)
-        in
-          if not(tyMatches(ty, ty')) then
-            error pos "expression does not match type constraint"
-          else ();
-          {tenv=tenv,
-           venv=S.enter(venv, name, E.VarEntry{ty=ty'})}
-        end
-    | transDec (venv, tenv, A.TypeDec decs) = let
+    | transDec (venv, tenv, A.TypeDec decs, _) = let
         fun trdec ({name,ty,pos=_}, {venv,tenv}) =
               {venv=venv,
                tenv=S.enter(tenv, name, transTy(tenv,ty))}
          in foldl trdec {venv=venv, tenv=tenv} decs
         end
-    | transDec (venv, tenv, A.FunctionDec decs) = let
+    | transDec (venv, tenv, A.FunctionDec decs, _) = let
         fun trdec ({name,params,result,body,pos}, {venv,tenv}) = let
               fun trparam {name,typ,pos,escape=_} =
                     {name=name, ty=lookupTy(tenv, typ, pos)}
@@ -157,7 +258,7 @@ struct
               fun enterParam ({name,ty}, venv) =
                     S.enter(venv, name, E.VarEntry{ty=ty})
               val venv'' = foldl enterParam venv' params'
-              val {ty=bodyTy,...} = transExp(venv'', tenv) body
+              val {ty=bodyTy,...} = transExp(venv'', tenv, false) body
               in
                 if not(tyMatches(bodyTy, resultTy)) then
                   error pos "function body type does not match result type"
