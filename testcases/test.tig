@@ -19,7 +19,7 @@ let
   var p := person {name="bob"}
   var p := person {name="bob", age="9"}
   var p := person {title="bob", age=9}
-  var p := per {name="bob"}
+  var p:person := per {name="bob"}
   var a := if foo > bar then foo else bar
   var a := if "x" then 5
   var a := if 5+5=10 then "good" else -1
@@ -28,6 +28,16 @@ let
   var arr := people["3"] of 2
   var arr := people[3] of nil
   function h() = while 1 do let function g() = break in break end
+  type w = x
+  type x = y
+  type y = w
+  type z = z
+  type list = intlist
+  type intlist = {hd:int, tl:intlist}
+  var x:list := intlist {hd=1, tl=nil}
+  var x:intlist := list {hd=1, tl=nil}
+  function t(l:intlist):int = 1
+  var u := t(intlist{hd=1,tl=nil})
 in
   (ord("a")-97;
    substring(9, "hi");

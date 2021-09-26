@@ -1,5 +1,5 @@
 structure Semant :
-  sig val transProg : Absyn.exp -> Types.ty end =
+  sig val transProg : Absyn.exp -> unit end =
 struct
 
   structure A = Absyn
@@ -16,7 +16,7 @@ struct
 
   fun tyMatches (T.NIL, T.RECORD _) = true
     | tyMatches (_, T.NIL)          = impossible "nil declared type"
-    | tyMatches (ty, declared) = ty = declared
+    | tyMatches (ty, declared)      = ty = declared
 
   local
     fun checkArith (T.INT, T.INT,_) = T.INT
@@ -26,8 +26,8 @@ struct
       | checkEq (T.RECORD _, T.NIL, _) = T.INT
       | checkEq (T.NIL, T.NIL, pos) =
           (error pos "cannot determine type of nil"; T.INT)
-      | checkEq (a, b, pos) =
-          (if a <> b then error pos "type mismatch" else (); T.INT)
+      | checkEq (l, r, pos) =
+          (if l <> r then error pos "type mismatch" else (); T.INT)
 
     fun checkOrd (T.INT, T.INT, _)       = T.INT
       | checkOrd (T.STRING, T.STRING, _) = T.INT
@@ -45,14 +45,18 @@ struct
       | checkOp A.GeOp     = checkOrd
   end
 
-  fun actualTy ty = ty
+  fun actualTy (T.NAME(_,ref(SOME ty))) = actualTy ty
+    | actualTy (T.NAME _) = impossible "incomplete name type"
+    | actualTy ty = ty
 
-  fun lookupTy (tenv, id, pos) =
+  fun lookupNameTy (tenv, id, pos) =
         (case S.look(tenv, id)
            of SOME ty => ty
             | NONE => (error pos ("undefined type " ^ S.name id); T.INT))
 
-  fun transProg exp = #ty(transExp(E.baseVenv, E.baseTenv, false) exp)
+  val lookupTy = actualTy o lookupNameTy
+
+  fun transProg exp = (transExp(E.baseVenv, E.baseTenv, false) exp; ())
 
   and transExp (venv, tenv, inLoop) = let
         fun trexp (A.VarExp var)  = trvar var
@@ -86,11 +90,13 @@ struct
           | trexp (A.RecordExp{fields,typ,pos}) =
               (case lookupTy(tenv, typ, pos)
                  of ty as T.RECORD(tyfields, _) => let
-                      fun validField((id:S.symbol,exp,_), (id',ty)) =
-                            id = id' andalso tyMatches(#ty(trexp exp), ty)
+                      fun fieldMatches((id:S.symbol,exp,_), (id',ty)) = let
+                            val {ty=expTy,...} = trexp exp
+                             in id = id' andalso tyMatches(expTy, actualTy ty)
+                            end
                       in
                         if length fields <> length tyfields orelse
-                            not(ListPair.all validField (fields, tyfields))
+                            not(ListPair.all fieldMatches (fields, tyfields))
                         then
                           error pos "invalid record expression"
                         else ();
@@ -107,7 +113,7 @@ struct
                         if sizeTy <> T.INT then
                           error pos "array size is not of type int"
                         else ();
-                        if not(tyMatches(initTy, elemTy)) then
+                        if not(tyMatches(initTy, actualTy elemTy)) then
                           error pos ("array init expression does not match " ^
                                      "element type")
                         else ();
@@ -188,7 +194,7 @@ struct
                 {exp=(), ty=T.UNIT}
               end
           | trexp (A.BreakExp pos) =
-              (if not(inLoop) then
+              (if not inLoop then
                  error pos "break outside loop"
                else ();
                {exp=(), ty=T.UNIT})
@@ -207,14 +213,14 @@ struct
               (case trvar var
                  of {ty=T.RECORD(fields,_),...} =>
                       (case List.find (fn (id',_) => id = id') fields
-                         of SOME(_,ty) => {exp=(), ty=ty}
+                         of SOME(_,ty) => {exp=(), ty=actualTy ty}
                           | NONE => (error pos ("no such field: " ^ S.name id);
                                      {exp=(), ty=T.INT}))
                   | _ => (error pos "attempt to select field of non-record value";
                           {exp=(), ty=T.INT}))
           | trvar (A.SubscriptVar(var,exp,pos)) =
               (case trvar var
-                 of {ty=T.ARRAY(ty,_),...} => {exp=(), ty=ty}
+                 of {ty=T.ARRAY(ty,_),...} => {exp=(), ty=actualTy ty}
                   | _ => (error pos "attempt to subscript non-array value";
                           {exp=(), ty=T.INT}))
          in trexp
@@ -240,40 +246,67 @@ struct
              venv=S.enter(venv, name, E.VarEntry{ty=ty})}
         end
     | transDec (venv, tenv, A.TypeDec decs, _) = let
-        fun trdec ({name,ty,pos=_}, {venv,tenv}) =
-              {venv=venv,
-               tenv=S.enter(tenv, name, transTy(tenv,ty))}
-         in foldl trdec {venv=venv, tenv=tenv} decs
+        fun enterHeader ({name,ty=_,pos}, tenv) =
+              (case S.look(tenv, name)
+                 of SOME(T.NAME(_, ref NONE)) =>
+                      (error pos ("duplicate type definition: " ^ S.name name);
+                       tenv)
+                  | _ => S.enter(tenv, name, T.NAME(name, ref NONE)))
+        val tenv' = foldl enterHeader tenv decs
+        fun completeTy {name,ty,pos} = let
+              fun illegalCycle (T.NAME(id, ref(SOME ty))) =
+                    id = name orelse illegalCycle ty
+                | illegalCycle _ = false
+              val tyref =
+                (case S.look(tenv', name)
+                   of SOME(T.NAME(_, ty)) => ty
+                    | _ => impossible "expected name type")
+              val ty = transTy(tenv', ty)
+               in
+                 tyref := SOME ty;
+                 if illegalCycle ty then
+                   error pos "illegal cycle in type declarations"
+                 else ()
+              end
+         in map completeTy decs;
+            {venv=venv, tenv=tenv'}
         end
     | transDec (venv, tenv, A.FunctionDec decs, _) = let
-        fun trdec ({name,params,result,body,pos}, {venv,tenv}) = let
-              fun trparam {name,typ,pos,escape=_} =
-                    {name=name, ty=lookupTy(tenv, typ, pos)}
+        fun trparam {name,typ,pos,escape=_} =
+              {name=name, ty=lookupTy(tenv, typ, pos)}
+        fun resultTy (SOME(tyid,pos)) = lookupTy(tenv, tyid, pos)
+          | resultTy NONE = T.UNIT
+        fun enterHeader ({name,params,result,body=_,pos}, (venv, entered)) =
+              if List.exists (fn n => n = name) entered then
+                (error pos ("duplicate function definition: " ^ S.name name);
+                 (venv, name::entered))
+              else let
+                val formals = map (#ty o trparam) params
+                val entry = E.FunEntry{formals=formals, result=resultTy result}
+                 in (S.enter(venv, name, entry), name::entered)
+                end
+        val (venv', _) = foldl enterHeader (venv, []) decs
+        fun trbody ({name,params,result,body,pos}, venv) = let
               val params' = map trparam params
-              val resultTy = case result
-                                of SOME(ty,pos) => lookupTy(tenv, ty, pos)
-                                 | NONE => T.UNIT
-              val venv' = S.enter(venv, name, E.FunEntry{formals=map #ty params',
-                                                         result=resultTy})
               fun enterParam ({name,ty}, venv) =
                     S.enter(venv, name, E.VarEntry{ty=ty})
               val venv'' = foldl enterParam venv' params'
               val {ty=bodyTy,...} = transExp(venv'', tenv, false) body
               in
-                if not(tyMatches(bodyTy, resultTy)) then
+                if not(tyMatches(bodyTy, resultTy result)) then
                   error pos "function body type does not match result type"
                 else ();
-                {venv=venv', tenv=tenv}
+                venv'
               end
-         in foldl trdec {venv=venv, tenv=tenv} decs
+         in {venv=foldl trbody venv' decs, tenv=tenv}
         end
 
-  and transTy (tenv, A.NameTy(id,pos)) = lookupTy(tenv, id, pos)
+  and transTy (tenv, A.NameTy(id,pos)) = lookupNameTy(tenv, id, pos)
     | transTy (tenv, A.RecordTy fields) = let
-        fun trfield {name,typ,pos,escape=_} = (name, lookupTy(tenv, typ, pos))
+        fun trfield {name,typ,pos,escape=_} = (name, lookupNameTy(tenv, typ, pos))
          in T.RECORD(map trfield fields, ref())
         end
     | transTy (tenv, A.ArrayTy(id,pos)) =
-        T.ARRAY(lookupTy(tenv, id, pos), ref())
+        T.ARRAY(lookupNameTy(tenv, id, pos), ref())
 
 end
