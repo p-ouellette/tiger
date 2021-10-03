@@ -3,7 +3,7 @@ structure Main :
     val parse : string -> Absyn.exp
     val translate : string -> unit
   end =
-struct 
+struct
   structure TigerLrVals = TigerLrValsFun(structure Token = LrParser.Token)
   structure Lex = TigerLexFun(structure Tokens = TigerLrVals.Tokens)
   structure TigerP = Join(structure ParserData = TigerLrVals.ParserData

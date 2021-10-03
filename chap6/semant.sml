@@ -6,6 +6,7 @@ struct
   structure E = Env
   structure S = Symbol
   structure T = Types
+  structure Tr = Translate
 
   val error = ErrorMsg.error
   val impossible = ErrorMsg.impossible
@@ -60,14 +61,14 @@ struct
 
   val lookupTy = actualTy o lookupNameTy
 
-  fun transExp (venv, tenv, attrs) = let
+  fun transExp (venv, tenv, level, attrs) = let
         fun trexp (A.VarExp var)  = trvar var
           | trexp (A.NilExp)      = {exp=(), ty=T.NIL}
           | trexp (A.IntExp _)    = {exp=(), ty=T.INT}
           | trexp (A.StringExp _) = {exp=(), ty=T.STRING}
           | trexp (A.CallExp{func,args,pos}) =
               (case S.look(venv, func)
-                 of SOME(E.FunEntry{formals,result}) => let
+                 of SOME(E.FunEntry{formals,result,...}) => let
                       fun checkArg(arg, ty, argn) =
                             (if not(tyMatches(#ty(trexp arg), ty)) then
                                error pos ("bad argument #" ^ Int.toString argn ^
@@ -172,7 +173,7 @@ struct
               end
           | trexp (A.WhileExp{test,body,pos}) = let
               val {ty=testTy,...} = trexp test
-              val {ty=bodyTy,...} = transExp(venv, tenv, {inLoop=true}) body
+              val {ty=bodyTy,...} = transExp(venv, tenv, level, {inLoop=true}) body
               in
                 if testTy <> T.INT then
                   error pos "test expression in while is not of type int"
@@ -183,10 +184,11 @@ struct
                 {exp=(), ty=T.UNIT}
               end
           | trexp (A.ForExp{var,lo,hi,body,pos,...}) = let
-              val venv' = S.enter(venv, var, E.VarEntry{ty=T.INT})
+              val access = Tr.allocLocal level true
+              val venv' = S.enter(venv, var, E.VarEntry{access=access, ty=T.INT})
               val {ty=loTy,...} = trexp lo
               val {ty=hiTy,...} = trexp hi
-              val {ty=bodyTy,...} = transExp(venv', tenv, {inLoop=true}) body
+              val {ty=bodyTy,...} = transExp(venv', tenv, level, {inLoop=true}) body
               in
                 if loTy <> T.INT then
                   error pos "lower bound in for is not of type int"
@@ -205,14 +207,14 @@ struct
                else ();
                {exp=(), ty=T.UNIT})
           | trexp (A.LetExp{decs,body,pos}) = let
-              fun trdec (dec, {venv,tenv}) = transDec(venv, tenv, dec, attrs)
+              fun trdec (dec, {venv,tenv}) = transDec(venv, tenv, level, dec, attrs)
               val {venv=venv',tenv=tenv'} = foldl trdec {venv=venv,tenv=tenv} decs
-               in transExp(venv', tenv', attrs) body
+               in transExp(venv', tenv', level, attrs) body
               end
 
         and trvar (A.SimpleVar(id,pos)) =
               (case S.look(venv, id)
-                 of SOME(E.VarEntry{ty}) => {exp=(), ty=actualTy ty}
+                 of SOME(E.VarEntry{ty,...}) => {exp=(), ty=actualTy ty}
                   | _ => (error pos ("undefined variable " ^ S.name id);
                           {exp=(), ty=T.ERROR}))
           | trvar (A.FieldVar(var,id,pos)) =
@@ -234,8 +236,9 @@ struct
          in trexp
         end
 
-  and transDec (venv, tenv, A.VarDec{name,typ,init,pos,...}, attrs) = let
-        val {ty=initTy,...} = transExp(venv, tenv, attrs) init
+  and transDec (venv, tenv, level, A.VarDec{name,typ,init,pos,...}, attrs) = let
+        val access = Tr.allocLocal level true
+        val {ty=initTy,...} = transExp(venv, tenv, level, attrs) init
         val ty = 
           case (typ, initTy)
             of (NONE, T.NIL)  => (error pos "unconstrained nil"; T.ERROR)
@@ -251,9 +254,9 @@ struct
                    ty
                  end
          in {tenv=tenv,
-             venv=S.enter(venv, name, E.VarEntry{ty=ty})}
+             venv=S.enter(venv, name, E.VarEntry{access=access, ty=ty})}
         end
-    | transDec (venv, tenv, A.TypeDec decs, _) = let
+    | transDec (venv, tenv, level, A.TypeDec decs, _) = let
         fun enterHeader ({name,ty=_,pos}, tenv) =
               (case S.look(tenv, name)
                  of SOME(T.NAME(_, ref NONE)) =>
@@ -266,9 +269,9 @@ struct
                     id = name orelse illegalCycle ty
                 | illegalCycle _ = false
               val tyref =
-                (case S.look(tenv', name)
-                   of SOME(T.NAME(_, ty)) => ty
-                    | _ => impossible "expected name type")
+                case S.look(tenv', name)
+                  of SOME(T.NAME(_, ty)) => ty
+                   | _ => impossible "expected name type"
               val ty = transTy(tenv', ty)
                in
                  tyref := SOME ty;
@@ -279,7 +282,7 @@ struct
          in map completeTy decs;
             {venv=venv, tenv=tenv'}
         end
-    | transDec (venv, tenv, A.FunctionDec decs, _) = let
+    | transDec (venv, tenv, level, A.FunctionDec decs, _) = let
         fun trparam {name,typ,pos,escape=_} =
               {name=name, ty=lookupTy(tenv, typ, pos)}
         fun resultTy (SOME(tyid,pos)) = lookupTy(tenv, tyid, pos)
@@ -287,19 +290,30 @@ struct
         fun enterHeader ({name,params,result,body=_,pos}, (venv, entered)) =
               if List.exists (fn n => n = name) entered then
                 (error pos ("duplicate function definition: " ^ S.name name);
-                 (venv, name::entered))
+                 (venv, entered))
               else let
                 val formals = map (#ty o trparam) params
-                val entry = E.FunEntry{formals=formals, result=resultTy result}
+                val label = Temp.newlabel()
+                val level' = Tr.newLevel {parent = level,
+                                          name = label,
+                                          formals = map (fn _ => true) formals}
+                val entry = E.FunEntry{level = level',
+                                       label = label,
+                                       formals = formals,
+                                       result = resultTy result}
                  in (S.enter(venv, name, entry), name::entered)
                 end
         val (venv', _) = foldl enterHeader (venv, []) decs
         fun trbody ({name,params,result,body,pos}, venv) = let
               val params' = map trparam params
-              fun enterParam ({name,ty}, venv) =
-                    S.enter(venv, name, E.VarEntry{ty=ty})
-              val venv'' = foldl enterParam venv' params'
-              val {ty=bodyTy,...} = transExp(venv'', tenv, {inLoop=false}) body
+              val accesses =
+                case S.look(venv, name)
+                  of SOME(E.FunEntry{level,...}) => Tr.formals level
+                   | _ => impossible "expected function"
+              fun enterParam (({name,ty}, access), venv) =
+                    S.enter(venv, name, E.VarEntry{access=access, ty=ty})
+              val venv'' = foldl enterParam venv' (ListPair.zip(params', accesses))
+              val {ty=bodyTy,...} = transExp(venv'', tenv, level, {inLoop=false}) body
               in
                 if not(tyMatches(bodyTy, resultTy result)) then
                   error pos "function body type does not match result type"
@@ -318,9 +332,12 @@ struct
         T.ARRAY(lookupNameTy(tenv, id, pos), ref())
 
   local
+    val level = Tr.newLevel {parent = Tr.outermost,
+                             name = Temp.newlabel(),
+                             formals = []}
     val attrs = {inLoop=false}
   in
-    val transProg = ignore o transExp(E.baseVenv, E.baseTenv, attrs)
+    val transProg = ignore o transExp(E.baseVenv, E.baseTenv, level, attrs)
   end
 
 end
