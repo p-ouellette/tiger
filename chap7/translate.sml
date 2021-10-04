@@ -7,12 +7,11 @@ sig
   val newLevel : {parent: level,
                   name: Temp.label,
                   formals: bool list} -> level
-  val formals: level -> access list
-  val allocLocal: level -> bool -> access
+  val formals : level -> access list
+  val allocLocal : level -> bool -> access
 
-  datatype exp = Ex of Tree.exp
-               | Nx of Tree.stm
-               | Cx of Temp.label * Templ.label -> Tree.stm
+  type exp
+
 end
 
 structure Translate : TRANSLATE =
@@ -46,6 +45,10 @@ struct
 
   (* expression conversion functions *)
 
+  datatype exp = Ex of Tree.exp
+               | Nx of Tree.stm
+               | Cx of Temp.label * Temp.label -> Tree.stm
+
   fun seq [] = T.EXP(T.CONST 0)
     | seq [x] = x
     | seq (x::xs) = T.SEQ(x, seq xs)
@@ -67,14 +70,14 @@ struct
   fun unNx (Nx s) = s
     | unNx (Ex e) = T.EXP e
     | unNx (Cx genstm) = let
-        val l = Temp.newtemp()
+        val l = Temp.newlabel()
          in seq [genstm(l, l), T.LABEL l]
         end
 
   fun unCx (Cx genstm) = genstm
-    | unCx (Ex(T.CONST 0)) = fn (_, f) => T.JUMP(T.NAME f, [f])
-    | unCx (Ex(T.CONST _)) = fn (t, _) => T.JUMP(T.NAME t, [t])
-    | unCx (Ex e) = fn (t, f) => T.CJUMP(T.EQ, e, T.CONST 0, f, t)
+    | unCx (Ex(T.CONST 0)) = (fn (_, f) => T.JUMP(T.NAME f, [f]))
+    | unCx (Ex(T.CONST _)) = (fn (t, _) => T.JUMP(T.NAME t, [t]))
+    | unCx (Ex e) = (fn (t, f) => T.CJUMP(T.EQ, e, T.CONST 0, f, t))
     | unCx (Nx _) = impossible "unCx(Nx s)"
 
 end

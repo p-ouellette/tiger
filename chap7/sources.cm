@@ -6,11 +6,12 @@ $/smlnj-lib.cm
 absyn.sml
 env.sml
 errormsg.sml
-frame.sig
 findescape.sml
+frame.sig
 main.sml
 mipsframe.sml
 prabsyn.sml
+printtree.sml
 semant.sml
 symbol.sml
 table.sig
@@ -19,5 +20,6 @@ temp.sig
 temp.sml
 tiger.grm
 tiger.lex
-types.sml
 translate.sml
+tree.sml
+types.sml
