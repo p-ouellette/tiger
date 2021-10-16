@@ -1,6 +1,8 @@
 structure MIPSFrame : FRAME =
 struct
 
+  structure T = Tree
+
   datatype access = InFrame of int
                   | InReg of Temp.temp
 
@@ -28,5 +30,12 @@ struct
         (nLocals := !nLocals + 1;
          InFrame(!nLocals * ~4))
     | allocLocal frame false = InReg(Temp.newtemp())
+
+
+  val FP = Temp.newtemp()
+  val wordSize = 4
+
+  fun expOfAccess (InFrame off) exp = T.MEM(T.BINOP(T.PLUS, exp, T.CONST off))
+    | expOfAccess (InReg t) _ = T.TEMP t
 
 end
