@@ -17,4 +17,6 @@ sig
    *)
   val expOfAccess : access -> Tree.exp -> Tree.exp
 
+  val externalCall : string * Tree.exp list -> Tree.exp
+
 end

@@ -33,6 +33,7 @@ struct
   structure Ty = Types
 
   val impossible = ErrorMsg.impossible
+  val unimplemented = ErrorMsg.unimplemented
 
   datatype level = Outermost
                  | Inner of level * Frame.frame * unit ref
@@ -102,6 +103,8 @@ struct
     | unCx (Ex e) = (fn (t, f) => T.CJUMP(T.EQ, e, T.CONST 0, f, t))
     | unCx (Nx _) = impossible "unCx(Nx _)"
 
+  (* building IR expressions *)
+
   (* Returns a Tree.exp that computes the address of the frame at level declvl
    * when the current level is curlvl.
    *)
@@ -132,12 +135,29 @@ struct
   fun intExp i = Ex(T.CONST i)
 
   (* TODO *)
-  fun stringExp s = Ex(T.CONST 0)
+  fun stringExp s = let
+        val l = Temp.newlabel()
+         in Ex(T.NAME l)
+        end
 
   fun arith oper (lt, rt) = Ex(T.BINOP(oper, unEx lt, unEx rt))
 
-  (* TODO *)
-  fun cmpString oper (lt, rt) = Ex(T.CONST 0)
+  fun cmpString oper (lt, rt) = let
+        fun id (x, y) = (x, y)
+        fun sw (x, y) = (y, x)
+        val test = Frame.externalCall("stringEqual", [unEx lt, unEx rt])
+        val labsw =
+          case oper
+            of T.EQ => id
+             | T.NE => sw
+             | T.LT => unimplemented()
+             | T.LE => unimplemented()
+             | T.GT => unimplemented()
+             | T.GE => unimplemented()
+             | _ => impossible "bad comparison operator"
+        fun genstm (t, f) = T.CJUMP(T.EQ, test, T.CONST 0, f, t)
+         in Cx(genstm o labsw)
+        end
 
   fun cmpScalar oper (lt, rt) =
         Cx(fn (t, f) => T.CJUMP(oper, unEx lt, unEx rt, t, f))
@@ -167,26 +187,26 @@ struct
          in Nx(seq [testgen(t, f), T.LABEL t, tstm, T.LABEL f])
         end
 
-  fun ifExp (test, Cx tgen, Ex(T.CONST 0)) = let
+  fun ifCondBool (test, tgen, fb) = let
         val z = Temp.newlabel()
         val testgen = unCx test
-         in Cx(fn (t, f) => seq [testgen(z, f), T.LABEL z, tgen(t, f)])
+         in Cx(fn (t, f) => seq [testgen(z, if fb then t else f),
+                                 T.LABEL z,
+                                 tgen(t, f)])
         end
-    | ifExp (test, Cx tgen, Ex(T.CONST 1)) = let
+
+  fun ifBoolCond (test, tb, fgen) = let
         val z = Temp.newlabel()
         val testgen = unCx test
-         in Cx(fn (t, f) => seq [testgen(z, t), T.LABEL z, tgen(t, f)])
+         in Cx(fn (t, f) => seq [testgen(if tb then t else f, z),
+                                 T.LABEL z,
+                                 fgen(t, f)])
         end
-    | ifExp (test, Ex(T.CONST 0), Cx fgen) = let
-        val z = Temp.newlabel()
-        val testgen = unCx test
-         in Cx(fn (t, f) => seq [testgen(f, z), T.LABEL z, fgen(t, f)])
-        end
-    | ifExp (test, Ex(T.CONST 1), Cx fgen) = let
-        val z = Temp.newlabel()
-        val testgen = unCx test
-         in Cx(fn (t, f) => seq [testgen(t, z), T.LABEL z, fgen(t, f)])
-        end
+
+  fun ifExp (test, Cx tgen, Ex(T.CONST 0)) = ifCondBool(test, tgen, false)
+    | ifExp (test, Cx tgen, Ex(T.CONST 1)) = ifCondBool(test, tgen, true)
+    | ifExp (test, Ex(T.CONST 0), Cx fgen) = ifBoolCond(test, false, fgen)
+    | ifExp (test, Ex(T.CONST 1), Cx fgen) = ifBoolCond(test, true, fgen)
     | ifExp (test, Cx tgen, Cx fgen) = let
         val y = Temp.newlabel()
         val z = Temp.newlabel()

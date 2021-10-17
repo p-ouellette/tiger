@@ -38,4 +38,6 @@ struct
   fun expOfAccess (InFrame off) exp = T.MEM(T.BINOP(T.PLUS, exp, T.CONST off))
     | expOfAccess (InReg t) _ = T.TEMP t
 
+  fun externalCall (name, args) = T.CALL(T.NAME(Temp.namedlabel name), args)
+
 end
