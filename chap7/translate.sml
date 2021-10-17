@@ -13,14 +13,24 @@ sig
   type exp
 
   val simpleVar : access * level -> exp
+  val fieldVar : exp * int -> exp
+  val subscriptVar : exp * exp -> exp
+  val nilExp : exp
+  val intExp : int -> exp
+  val stringExp : string -> exp
+  val opExp : Absyn.oper * Types.ty -> exp * exp -> exp
+  val ifThenExp : exp * exp -> exp
+  val ifExp : exp * exp * exp -> exp
 
 end
 
 structure Translate : TRANSLATE =
 struct
   
+  structure A = Absyn
   structure Frame = MIPSFrame
   structure T = Tree
+  structure Ty = Types
 
   val impossible = ErrorMsg.impossible
 
@@ -66,7 +76,7 @@ struct
     | seq (x::xs) = T.SEQ(x, seq xs)
 
   fun unEx (Ex e) = e
-    | unEx (Nx s) = T.ESEQ(s, T.CONST 0)
+    | unEx (Nx _) = impossible "unEx (Nx _)"
     | unEx (Cx genstm) = let
         val r = Temp.newtemp()
         val t = Temp.newlabel()
@@ -90,7 +100,7 @@ struct
     | unCx (Ex(T.CONST 0)) = (fn (_, f) => T.JUMP(T.NAME f, [f]))
     | unCx (Ex(T.CONST _)) = (fn (t, _) => T.JUMP(T.NAME t, [t]))
     | unCx (Ex e) = (fn (t, f) => T.CJUMP(T.EQ, e, T.CONST 0, f, t))
-    | unCx (Nx _) = impossible "unCx(Nx s)"
+    | unCx (Nx _) = impossible "unCx(Nx _)"
 
   (* Returns a Tree.exp that computes the address of the frame at level declvl
    * when the current level is curlvl.
@@ -108,5 +118,108 @@ struct
   fun simpleVar (_, Outermost) = impossible "simpleVar(_, Outermost)"
     | simpleVar ((declvl, access), curlvl) =
         Ex(Frame.expOfAccess access (framePtr(declvl, curlvl)))
+
+  fun fieldVar (exp, i) =
+        Ex(T.MEM(T.BINOP(T.PLUS, unEx exp, T.CONST(i * Frame.wordSize))))
+
+  fun subscriptVar (exp, iexp) = let
+        val offset = T.BINOP(T.MUL, unEx iexp, T.CONST Frame.wordSize)
+         in Ex(T.MEM(T.BINOP(T.PLUS, unEx exp, offset)))
+        end
+
+  val nilExp = Ex(T.CONST 0)
+
+  fun intExp i = Ex(T.CONST i)
+
+  (* TODO *)
+  fun stringExp s = Ex(T.CONST 0)
+
+  fun arith oper (lt, rt) = Ex(T.BINOP(oper, unEx lt, unEx rt))
+
+  (* TODO *)
+  fun cmpString oper (lt, rt) = Ex(T.CONST 0)
+
+  fun cmpScalar oper (lt, rt) =
+        Cx(fn (t, f) => T.CJUMP(oper, unEx lt, unEx rt, t, f))
+
+  fun opExp (A.PlusOp, _)   = arith T.PLUS
+    | opExp (A.MinusOp, _)  = arith T.MINUS
+    | opExp (A.TimesOp, _)  = arith T.MUL
+    | opExp (A.DivideOp, _) = arith T.DIV
+    | opExp (A.EqOp,  Ty.STRING) = cmpString T.EQ
+    | opExp (A.NeqOp, Ty.STRING) = cmpString T.NE
+    | opExp (A.LtOp,  Ty.STRING) = cmpString T.LT
+    | opExp (A.LeOp,  Ty.STRING) = cmpString T.LE
+    | opExp (A.GtOp,  Ty.STRING) = cmpString T.GT
+    | opExp (A.GeOp,  Ty.STRING) = cmpString T.GE
+    | opExp (A.EqOp, _)  = cmpScalar T.EQ
+    | opExp (A.NeqOp, _) = cmpScalar T.NE
+    | opExp (A.LtOp, _)  = cmpScalar T.LT
+    | opExp (A.LeOp, _)  = cmpScalar T.LE
+    | opExp (A.GtOp, _)  = cmpScalar T.GT
+    | opExp (A.GeOp, _)  = cmpScalar T.GE
+
+  fun ifThenExp (test, texp) = let
+        val t = Temp.newlabel()
+        val f = Temp.newlabel()
+        val testgen = unCx test
+        val tstm = unNx texp
+         in Nx(seq [testgen(t, f), T.LABEL t, tstm, T.LABEL f])
+        end
+
+  fun ifExp (test, Cx tgen, Ex(T.CONST 0)) = let
+        val z = Temp.newlabel()
+        val testgen = unCx test
+         in Cx(fn (t, f) => seq [testgen(z, f), T.LABEL z, tgen(t, f)])
+        end
+    | ifExp (test, Cx tgen, Ex(T.CONST 1)) = let
+        val z = Temp.newlabel()
+        val testgen = unCx test
+         in Cx(fn (t, f) => seq [testgen(z, t), T.LABEL z, tgen(t, f)])
+        end
+    | ifExp (test, Ex(T.CONST 0), Cx fgen) = let
+        val z = Temp.newlabel()
+        val testgen = unCx test
+         in Cx(fn (t, f) => seq [testgen(f, z), T.LABEL z, fgen(t, f)])
+        end
+    | ifExp (test, Ex(T.CONST 1), Cx fgen) = let
+        val z = Temp.newlabel()
+        val testgen = unCx test
+         in Cx(fn (t, f) => seq [testgen(t, z), T.LABEL z, fgen(t, f)])
+        end
+    | ifExp (test, Cx tgen, Cx fgen) = let
+        val y = Temp.newlabel()
+        val z = Temp.newlabel()
+        val testgen = unCx test
+         in Cx(fn (t, f) => seq [testgen(y, z),
+                                 T.LABEL y, tgen(t, f),
+                                 T.LABEL z, fgen(t, f)])
+        end
+    | ifExp (test, Nx tstm, Nx fstm) = let
+        val t = Temp.newlabel()
+        val f = Temp.newlabel()
+        val j = Temp.newlabel()
+        val testgen = unCx test
+         in Nx(seq [testgen(t, f),
+                    T.LABEL t, tstm, T.JUMP(T.NAME j, [j]),
+                    T.LABEL f, fstm,
+                    T.LABEL j])
+        end
+    | ifExp (test, Ex texp, Ex fexp) = let
+        val r = Temp.newtemp()
+        val t = Temp.newlabel()
+        val f = Temp.newlabel()
+        val j = Temp.newlabel()
+        val testgen = unCx test
+         in Ex(T.ESEQ(seq [testgen(t, f),
+                           T.LABEL t,
+                           T.MOVE(T.TEMP r, texp),
+                           T.JUMP(T.NAME j, [j]),
+                           T.LABEL f,
+                           T.MOVE(T.TEMP r, fexp),
+                           T.LABEL j],
+                      T.TEMP r))
+        end
+    | ifExp _ = impossible "bad if expression"
 
 end
