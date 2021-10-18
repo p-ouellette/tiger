@@ -13,9 +13,9 @@ struct
   fun newFrame {name, formals} = let
         fun access(escape, (acc, offset)) =
               (if escape then
-                 ((InFrame offset)::acc, offset + 4)
+                 (InFrame offset :: acc, offset + 4)
                else
-                 ((InReg(Temp.newtemp())::acc), offset))
+                 (InReg(Temp.newtemp()) :: acc, offset))
         val (formals, _) = foldl access ([], 0) formals
         in {name = name,
             formals = formals,

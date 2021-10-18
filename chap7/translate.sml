@@ -18,9 +18,20 @@ sig
   val nilExp : exp
   val intExp : int -> exp
   val stringExp : string -> exp
+  val callExp : {f: Temp.label,
+                 declvl: level,
+                 curlvl: level,
+                 args: exp list} -> exp
   val opExp : Absyn.oper * Types.ty -> exp * exp -> exp
+  val recordExp : exp list -> exp
+  val arrayExp : exp * exp -> exp
+  val seqExp : exp list -> exp
+  val assignExp : exp * exp -> exp
   val ifThenExp : exp * exp -> exp
   val ifExp : exp * exp * exp -> exp
+  val whileExp : exp * exp * Temp.label -> exp
+  val forExp : access * exp * exp * exp * Temp.label -> exp
+  val breakExp : Temp.label -> exp
 
 end
 
@@ -32,6 +43,7 @@ struct
   structure T = Tree
   structure Ty = Types
 
+  val wordSize = Frame.wordSize
   val impossible = ErrorMsg.impossible
   val unimplemented = ErrorMsg.unimplemented
 
@@ -66,28 +78,33 @@ struct
     | allocLocal (l as Inner(_,frame,_)) escape =
         (l, Frame.allocLocal frame escape)
 
+  (* helpers for building IR trees *)
+
+  fun seq [] = impossible "empty seq"
+    | seq [x] = x
+    | seq (x::xs) = T.SEQ(x, seq xs)
+
+  fun memOffset (base, offset) = T.MEM(T.BINOP(T.PLUS, base, offset))
+
   (* expression conversion functions *)
 
   datatype exp = Ex of T.exp
                | Nx of T.stm
                | Cx of Temp.label * Temp.label -> T.stm
 
-  fun seq [] = T.EXP(T.CONST 0)
-    | seq [x] = x
-    | seq (x::xs) = T.SEQ(x, seq xs)
-
   fun unEx (Ex e) = e
+    | unEx (Nx(T.EXP e)) = e
     | unEx (Nx _) = impossible "unEx (Nx _)"
     | unEx (Cx genstm) = let
-        val r = Temp.newtemp()
+        val r = T.TEMP(Temp.newtemp())
         val t = Temp.newlabel()
         val f = Temp.newlabel()
-         in T.ESEQ(seq [T.MOVE(T.TEMP r, T.CONST 1),
+         in T.ESEQ(seq [T.MOVE(r, T.CONST 1),
                         genstm(t, f),
                         T.LABEL f,
-                        T.MOVE(T.TEMP r, T.CONST 0),
+                        T.MOVE(r, T.CONST 0),
                         T.LABEL t],
-                   T.TEMP r)
+                   r)
         end
 
   fun unNx (Nx s) = s
@@ -123,11 +140,11 @@ struct
         Ex(Frame.expOfAccess access (framePtr(declvl, curlvl)))
 
   fun fieldVar (exp, i) =
-        Ex(T.MEM(T.BINOP(T.PLUS, unEx exp, T.CONST(i * Frame.wordSize))))
+        Ex(memOffset(unEx exp, T.CONST(i * wordSize)))
 
   fun subscriptVar (exp, iexp) = let
-        val offset = T.BINOP(T.MUL, unEx iexp, T.CONST Frame.wordSize)
-         in Ex(T.MEM(T.BINOP(T.PLUS, unEx exp, offset)))
+        val offset = T.BINOP(T.MUL, unEx iexp, T.CONST wordSize)
+         in Ex(memOffset(unEx exp, offset))
         end
 
   val nilExp = Ex(T.CONST 0)
@@ -138,6 +155,11 @@ struct
   fun stringExp s = let
         val l = Temp.newlabel()
          in Ex(T.NAME l)
+        end
+
+  fun callExp {f, declvl, curlvl, args} = let
+        val sl = framePtr(declvl, curlvl)
+         in Ex(T.CALL(T.NAME f, sl :: map unEx args))
         end
 
   fun arith oper (lt, rt) = Ex(T.BINOP(oper, unEx lt, unEx rt))
@@ -178,6 +200,27 @@ struct
     | opExp (A.LeOp, _)  = cmpScalar T.LE
     | opExp (A.GtOp, _)  = cmpScalar T.GT
     | opExp (A.GeOp, _)  = cmpScalar T.GE
+
+  fun recordExp fields = let
+        val size = length fields * wordSize
+        val base = Frame.externalCall("allocRecord", [T.CONST size])
+        val r = T.TEMP(Temp.newtemp())
+        fun moveField (field, (moves, offset)) = let
+              val move = T.MOVE(memOffset(r, T.CONST offset), unEx field)
+               in (move::moves, offset + wordSize)
+              end
+        val (moves, _) = foldl moveField ([], 0) fields
+         in Ex(T.ESEQ(seq (T.MOVE(r, base) :: moves), r))
+        end
+
+  fun arrayExp (size, init) =
+        Ex(Frame.externalCall("initArray", [unEx size, unEx init]))
+
+  fun seqExp [] = Nx(T.EXP(T.CONST 0))
+    | seqExp [x] = x
+    | seqExp (x::xs) = Ex(T.ESEQ(unNx x, unEx(seqExp xs)))
+
+  fun assignExp (var, exp) = Nx(T.MOVE(unEx var, unEx exp))
 
   fun ifThenExp (test, texp) = let
         val t = Temp.newlabel()
@@ -221,25 +264,54 @@ struct
         val j = Temp.newlabel()
         val testgen = unCx test
          in Nx(seq [testgen(t, f),
-                    T.LABEL t, tstm, T.JUMP(T.NAME j, [j]),
-                    T.LABEL f, fstm,
+                    T.LABEL t, tstm,
+                    T.JUMP(T.NAME j, [j]),
+                    T.LABEL f,
+                    fstm,
                     T.LABEL j])
         end
     | ifExp (test, Ex texp, Ex fexp) = let
-        val r = Temp.newtemp()
+        val r = T.TEMP(Temp.newtemp())
         val t = Temp.newlabel()
         val f = Temp.newlabel()
         val j = Temp.newlabel()
         val testgen = unCx test
          in Ex(T.ESEQ(seq [testgen(t, f),
                            T.LABEL t,
-                           T.MOVE(T.TEMP r, texp),
+                           T.MOVE(r, texp),
                            T.JUMP(T.NAME j, [j]),
                            T.LABEL f,
-                           T.MOVE(T.TEMP r, fexp),
+                           T.MOVE(r, fexp),
                            T.LABEL j],
-                      T.TEMP r))
+                      r))
         end
     | ifExp _ = impossible "bad if expression"
+
+  fun whileExp (test, body, donelab) = let
+        val testlab = Temp.newlabel()
+        val bodylab = Temp.newlabel()
+        val testgen = unCx test
+         in Nx(seq [T.LABEL testlab,
+                    testgen(bodylab, donelab),
+                    T.LABEL bodylab,
+                    unNx body,
+                    T.JUMP(T.NAME testlab, [testlab]),
+                    T.LABEL donelab])
+        end
+
+  fun forExp ((_, access), lo, hi, body, donelab) = let
+        val var = Frame.expOfAccess access (T.TEMP Frame.FP)
+        val testlab = Temp.newlabel()
+        val looplab = Temp.newlabel()
+         in Nx(seq [T.MOVE(var, unEx lo),
+                    T.JUMP(T.NAME testlab, [testlab]),
+                    T.LABEL looplab,
+                    unNx body,
+                    T.MOVE(var, T.BINOP(T.PLUS, var, T.CONST 1)),
+                    T.LABEL testlab,
+                    T.CJUMP(T.LT, var, unEx hi, looplab, donelab)])
+        end
+
+  fun breakExp donelab = Nx(T.JUMP(T.NAME donelab, [donelab]))
 
 end

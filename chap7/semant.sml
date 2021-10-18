@@ -127,7 +127,9 @@ struct
                   | _ => (error pos (S.name typ ^ " is not an array type");
                           {exp=(), ty=T.ERROR}))
           | trexp (A.SeqExp exps) = let
-              val ty = foldl (fn ((e,_),_) => #ty(trexp e)) T.UNIT exps
+              val trexps = map (trexp o #1) exps
+              val ty = foldl (fn ({ty,...}, _) => ty) T.UNIT trexps
+              (*val exp = Tr.seqExp(map #exp trexps)*)
                in {exp=(), ty=ty}
               end
           | trexp (A.AssignExp{var,exp,pos}) = let
