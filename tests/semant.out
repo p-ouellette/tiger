@@ -1,0 +1,69 @@
+testcases/test10.tig:2.1: while body must produce no value
+testcases/test11.tig:2.1: upper bound in for is not of type int
+testcases/test13.tig:3.3: invalid comparison
+testcases/test14.tig:12.9: type mismatch
+testcases/test15.tig:3.1: then-expression must produce no value
+testcases/test16.tig:7.1: illegal cycle in type declarations
+testcases/test17.tig:4.23: undefined type treelist
+testcases/test18.tig:5.4: undefined function do_nothing2
+testcases/test19.tig:8.16: undefined variable a
+testcases/test20.tig:3.18: undefined variable i
+testcases/test21.tig:8.11: integer required
+testcases/test21.tig:5.1: function body type does not match result type
+testcases/test22.tig:7.6: no such field: nam
+testcases/test23.tig:7.12: type mismatch
+testcases/test23.tig:8.10: type mismatch
+testcases/test24.tig:5.3: attempt to subscript non-array value
+testcases/test25.tig:5.3: attempt to select field of non-record value
+testcases/test26.tig:3.3: integer required
+testcases/test28.tig:7.2: expression does not match type constraint
+testcases/test29.tig:7.2: expression does not match type constraint
+testcases/test31.tig:3.2: expression does not match type constraint
+testcases/test32.tig:6.11: array init expression does not match element type
+testcases/test33.tig:3.10: undefined type rectype
+testcases/test34.tig:5.2: bad argument #1 to function g (type mismatch)
+testcases/test35.tig:5.2: wrong number of arguments to function g
+testcases/test35.tig:5.2: bad argument #1 to function g (type mismatch)
+testcases/test36.tig:5.2: wrong number of arguments to function g
+testcases/test38.tig:6.2: duplicate type definition: a
+testcases/test39.tig:6.2: duplicate function definition: g
+testcases/test40.tig:3.2: function body type does not match result type
+testcases/test43.tig:4.2: cannot assign valueless expression
+testcases/test45.tig:5.2: unconstrained nil
+testcases/test49.tig:5.18: syntax error: inserting  PLUS
+testcases/test49.tig:5.10: undefined variable rectype
+testcases/test9.tig:3.1: types of if branches do not agree
+testcases/test.tig:2.3: unconstrained nil
+testcases/test.tig:4.3: cannot assign valueless expression
+testcases/test.tig:7.3: expression does not match type constraint
+testcases/test.tig:8.24: integer required
+testcases/test.tig:8.11: undefined type real
+testcases/test.tig:10.12: undefined type bool
+testcases/test.tig:15.14: undefined type real
+testcases/test.tig:15.14: undefined type real
+testcases/test.tig:18.17: no such field: a
+testcases/test.tig:19.12: wrong number of fields in record expression
+testcases/test.tig:20.32: type of record field age does not match declared type
+testcases/test.tig:21.20: expected record field name, got title
+testcases/test.tig:22.19: undefined type per
+testcases/test.tig:24.12: test expression in if is not of type int
+testcases/test.tig:24.12: then-expression must produce no value
+testcases/test.tig:24.3: cannot assign valueless expression
+testcases/test.tig:25.12: types of if branches do not agree
+testcases/test.tig:27.14: undefined type intarray
+testcases/test.tig:28.14: array size is not of type int
+testcases/test.tig:28.14: array init expression does not match element type
+testcases/test.tig:30.48: break outside loop
+testcases/test.tig:33.3: illegal cycle in type declarations
+testcases/test.tig:34.3: illegal cycle in type declarations
+testcases/test.tig:44.4: wrong number of arguments to function substring
+testcases/test.tig:44.4: bad argument #1 to function substring (type mismatch)
+testcases/test.tig:44.4: bad argument #2 to function substring (type mismatch)
+testcases/test.tig:45.4: undefined function prin
+testcases/test.tig:47.5: integer required
+testcases/test.tig:48.7: cannot determine type of nil
+testcases/test.tig:49.9: type mismatch
+testcases/test.tig:51.4: undefined variable print
+testcases/test.tig:53.5: invalid comparison
+testcases/test.tig:54.4: bad argument #2 to function f (type mismatch)
+testcases/test.tig:58.4: break outside loop

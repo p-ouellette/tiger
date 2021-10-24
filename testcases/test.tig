@@ -32,6 +32,7 @@ let
   type x = y
   type y = w
   type z = z
+  var cycle:z := nil
   type list = intlist
   type intlist = {hd:int, tl:intlist}
   var x:list := intlist {hd=1, tl=nil}

@@ -15,6 +15,7 @@ and exp = VarExp of var
         | OpExp of {left: exp, oper: oper, right: exp, pos: pos}
         | RecordExp of {fields: (symbol * exp * pos) list,
                         typ: symbol, pos: pos}
+        | ArrayExp of {typ: symbol, size: exp, init: exp, pos: pos}
         | SeqExp of (exp * pos) list
         | AssignExp of {var: var, exp: exp, pos: pos}
         | IfExp of {test: exp, then': exp, else': exp option, pos: pos}
@@ -23,7 +24,6 @@ and exp = VarExp of var
                      lo: exp, hi: exp, body: exp, pos: pos}
         | BreakExp of pos
         | LetExp of {decs: dec list, body: exp, pos: pos}
-        | ArrayExp of {typ: symbol, size: exp, init: exp, pos: pos}
 
 and dec = FunctionDec of fundec list
         | VarDec of {name: symbol,

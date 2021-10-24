@@ -1,5 +1,7 @@
 signature TRANSLATE =
 sig
+  structure Frame : FRAME
+
   type level
   type access
 
@@ -10,6 +12,10 @@ sig
   val formals : level -> access list
   val allocLocal : level -> bool -> access
 
+  type compilation
+  val newCompilation : unit -> compilation
+  val getResult : compilation -> Frame.frag list
+
   type exp
 
   val simpleVar : access * level -> exp
@@ -17,11 +23,9 @@ sig
   val subscriptVar : exp * exp -> exp
   val nilExp : exp
   val intExp : int -> exp
-  val stringExp : string -> exp
-  val callExp : {f: Temp.label,
-                 declvl: level,
-                 curlvl: level,
-                 args: exp list} -> exp
+  val stringExp : compilation * string -> exp
+  val proc : compilation * level * exp -> unit
+  val callExp : Temp.label * level * level * exp list -> exp
   val opExp : Absyn.oper * Types.ty -> exp * exp -> exp
   val recordExp : exp list -> exp
   val arrayExp : exp * exp -> exp
@@ -32,7 +36,6 @@ sig
   val whileExp : exp * exp * Temp.label -> exp
   val forExp : access * exp * exp * exp * Temp.label -> exp
   val breakExp : Temp.label -> exp
-
 end
 
 structure Translate : TRANSLATE =
@@ -78,6 +81,14 @@ struct
     | allocLocal (l as Inner(_,frame,_)) escape =
         (l, Frame.allocLocal frame escape)
 
+  (* fragment lists *)
+
+  type compilation = Frame.frag list ref
+
+  fun newCompilation() : compilation = ref []
+  fun addFrag (comp, frag) = comp := frag :: !comp
+  fun getResult comp = !comp
+
   (* helpers for building IR trees *)
 
   fun seq [] = impossible "empty seq"
@@ -94,7 +105,7 @@ struct
 
   fun unEx (Ex e) = e
     | unEx (Nx(T.EXP e)) = e
-    | unEx (Nx _) = impossible "unEx (Nx _)"
+    | unEx (Nx s) = T.ESEQ(s, T.CONST 0)
     | unEx (Cx genstm) = let
         val r = T.TEMP(Temp.newtemp())
         val t = Temp.newlabel()
@@ -151,13 +162,22 @@ struct
 
   fun intExp i = Ex(T.CONST i)
 
-  (* TODO *)
-  fun stringExp s = let
+  fun stringExp (comp, s) = let
         val l = Temp.newlabel()
-         in Ex(T.NAME l)
+         in addFrag(comp, Frame.STRING(l, s));
+            Ex(T.NAME l)
         end
 
-  fun callExp {f, declvl, curlvl, args} = let
+  fun proc (_, Outermost, _) = impossible "proc(_, Outermost, _)"
+    | proc (comp, Inner(_,frame,_), body) = let
+        val body = T.MOVE(T.TEMP Frame.RV, unEx body)
+        val body = Frame.procEntryExit1(frame, body)
+         in addFrag(comp, Frame.PROC{frame=frame, body=body})
+        end
+
+  fun callExp (f, Outermost, _, args) =
+        Ex(T.CALL(T.NAME f, map unEx args))
+    | callExp (f, Inner(declvl,_,_), curlvl, args) = let
         val sl = framePtr(declvl, curlvl)
          in Ex(T.CALL(T.NAME f, sl :: map unEx args))
         end
@@ -309,7 +329,8 @@ struct
                     unNx body,
                     T.MOVE(var, T.BINOP(T.PLUS, var, T.CONST 1)),
                     T.LABEL testlab,
-                    T.CJUMP(T.LT, var, unEx hi, looplab, donelab)])
+                    T.CJUMP(T.LT, var, unEx hi, looplab, donelab),
+                    T.LABEL donelab])
         end
 
   fun breakExp donelab = Nx(T.JUMP(T.NAME donelab, [donelab]))

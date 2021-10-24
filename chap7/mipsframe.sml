@@ -31,13 +31,18 @@ struct
          InFrame(!nLocals * ~4))
     | allocLocal frame false = InReg(Temp.newtemp())
 
-
   val FP = Temp.newtemp()
+  val RV = Temp.newtemp()
   val wordSize = 4
+
+  datatype frag = PROC of {frame: frame, body: T.stm}
+                | STRING of Temp.label * string
 
   fun expOfAccess (InFrame off) exp = T.MEM(T.BINOP(T.PLUS, exp, T.CONST off))
     | expOfAccess (InReg t) _ = T.TEMP t
 
   fun externalCall (name, args) = T.CALL(T.NAME(Temp.namedlabel name), args)
+
+  fun procEntryExit1 (frame, body) = body
 
 end

@@ -1,9 +1,9 @@
-structure Printtree : 
-     sig val printtree : TextIO.outstream * Tree.stm -> unit end =
+structure PrintTree :
+     sig val printTree : TextIO.outstream * Tree.stm -> unit end =
 struct
 
   structure T = Tree
-fun printtree (outstream, s0) =
+fun printTree (outstream, s0) =
  let fun say s =  TextIO.output(outstream,s)
   fun sayln s= (say s; say "\n") 
 

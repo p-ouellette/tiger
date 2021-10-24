@@ -1,6 +1,6 @@
 structure Main :
   sig
-    val parse : string -> Absyn.exp
+    val printAbsyn : string -> unit
     val translate : string -> unit
   end =
 struct
@@ -20,5 +20,13 @@ struct
             absyn
         end handle LrParser.ParseError => raise ErrorMsg.Error
 
-  val translate = Semant.transProg o parse
+  fun printAbsyn filename = PrintAbsyn.print(TextIO.stdOut, parse filename)
+
+  fun translate filename = let
+        fun printFrag (Translate.Frame.PROC{body,...}) =
+              PrintTree.printTree(TextIO.stdOut, body)
+          | printFrag _ = ()
+        val frags = Semant.transProg (parse filename)
+         in map printFrag frags; ()
+        end
 end

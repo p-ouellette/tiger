@@ -6,7 +6,6 @@ $/smlnj-lib.cm
 absyn.sml
 env.sml
 errormsg.sml
-findescape.sml
 frame.sig
 main.sml
 mipsframe.sml
