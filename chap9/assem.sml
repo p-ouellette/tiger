@@ -1,4 +1,5 @@
-structure Assem = struct
+structure Assem =
+struct
 
   type reg = string
   type temp = Temp.temp
