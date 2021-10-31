@@ -4,11 +4,15 @@ $/basis.cm
 $/ml-yacc-lib.cm
 $/smlnj-lib.cm
 absyn.sml
+assem.sml
+canon.sml
+codegen.sig
 env.sml
 errormsg.sml
 frame.sig
 main.sml
 mipsframe.sml
+mipsgen.sml
 prabsyn.sml
 printtree.sml
 semant.sml

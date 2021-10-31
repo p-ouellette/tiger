@@ -9,8 +9,16 @@ sig
   val formals : frame -> access list
   val allocLocal : frame -> bool -> access
 
+  type register = string
+  val tempMap : register Temp.Table.table
+
+  val SP : Temp.temp
   val FP : Temp.temp
   val RV : Temp.temp
+
+  (* Registers "trashed" by call. *)
+  val calldefs : Temp.temp list
+
   val wordSize : int
 
   datatype frag = PROC of {frame: frame, body: Tree.stm}
@@ -23,6 +31,21 @@ sig
 
   val externalCall : string * Tree.exp list -> Tree.exp
 
+  (* Returns the correct position (register or memory) for the ith argument
+   * before a call.
+   *)
+  val argPos : int -> Tree.exp
+
+  (* View shift *)
   val procEntryExit1 : frame * Tree.stm -> Tree.stm
+
+  (* Appends a "sink" instruction to the function body to tell the register
+   * allocator that certain registers are live at procedure exit.
+   *)
+  val procEntryExit2 : frame * Assem.instr list -> Assem.instr list
+
+  val procEntryExit3 : frame * Assem.instr list -> {prolog: string,
+                                                    body: Assem.instr list,
+                                                    epilog: string}
 
 end
