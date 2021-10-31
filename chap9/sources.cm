@@ -13,6 +13,7 @@ frame.sig
 main.sml
 mipsframe.sml
 mipsgen.sml
+parse.sml
 prabsyn.sml
 printtree.sml
 semant.sml
