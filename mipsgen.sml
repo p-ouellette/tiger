@@ -8,11 +8,27 @@ struct
   val impossible = ErrorMsg.impossible
   val unimplemented = ErrorMsg.unimplemented
 
-  fun opInstr T.PLUS  = "add"
-    | opInstr T.MINUS = "sub"
-    | opInstr T.MUL   = "mul"
-    | opInstr T.DIV   = "div"
-    | opInstr _ = unimplemented()
+  fun binop T.PLUS  = "add"
+    | binop T.MINUS = "sub"
+    | binop T.MUL   = "mul"
+    | binop T.DIV   = "div"
+    | binop T.AND   = "and"
+    | binop T.OR    = "or"
+    | binop T.XOR   = "xor"
+    | binop T.LSHIFT  = "sll"
+    | binop T.RSHIFT  = "srl"
+    | binop T.ARSHIFT = "sra"
+
+  fun relop T.EQ = "beq"
+    | relop T.NE = "bne"
+    | relop T.LT = "blt"
+    | relop T.GT = "bgt"
+    | relop T.LE = "ble"
+    | relop T.GE = "bge"
+    | relop T.ULT = "bltu"
+    | relop T.ULE = "bleu"
+    | relop T.UGT = "bgtu"
+    | relop T.UGE = "bgeu"
 
   fun codegen frame stm = let
         val ilist = ref ([]: A.instr list)
@@ -21,88 +37,96 @@ struct
         fun imm i =
               if i < 0 then "-" ^ Int.toString(Int.abs i)
               else Int.toString i
+        val lab = Symbol.name
 
-            (* load word *)
-        fun munchStm (T.MOVE(T.TEMP t, T.MEM(T.BINOP(T.PLUS, e, T.CONST i)))) =
-              munchLW(t, e, i)
-          | munchStm (T.MOVE(T.TEMP t, T.MEM(T.BINOP(T.PLUS, T.CONST i, e)))) =
-              munchLW(t, e, i)
-          | munchStm (T.MOVE(T.TEMP t, T.MEM(T.CONST i))) =
-              emit(A.OPER{assem="lw `d0, " ^ imm i,
-                          src=[], dst=[t], jump=NONE})
-          | munchStm (T.MOVE(T.TEMP t, T.MEM(e))) =
-              emit(A.OPER{assem="lw `d0, (`s0)",
-                          src=[munchExp e], dst=[t], jump=NONE})
-            (* load immediate *)
-          | munchStm (T.MOVE(T.TEMP t, T.CONST i)) =
-              emit(A.OPER{assem="li `d0, " ^ imm i,
-                          src=[], dst=[t], jump=NONE})
-            (* load address *)
-          | munchStm (T.MOVE(T.TEMP t, T.BINOP(T.PLUS, e, T.CONST i))) =
-              munchLA(t, e, i)
-          | munchStm (T.MOVE(T.TEMP t, T.BINOP(T.PLUS, T.CONST i, e))) =
-              munchLA(t, e, i)
-            (* move *)
+        fun munchStm (T.MOVE(T.TEMP t, T.MEM addr)) = munchLW addr t
+          | munchStm (T.MOVE(T.TEMP t, T.NAME l))  = munchLA l t
+          | munchStm (T.MOVE(T.TEMP t, T.CONST i)) = munchLI i t
+          | munchStm (T.MOVE(T.TEMP t, T.BINOP b)) = munchBinop b t
           | munchStm (T.MOVE(T.TEMP t, e)) =
-              emit(A.OPER{assem="move `d0, `s0",
+              emit(A.OPER{assem="move `d0, `s0\n",
                           src=[munchExp e], dst=[t], jump=NONE})
-            (* store word *)
-          | munchStm (T.MOVE(T.MEM(T.BINOP(T.PLUS, e1, T.CONST i)), e2)) =
-              munchSW(e1, i, e2)
-          | munchStm (T.MOVE(T.MEM(T.BINOP(T.PLUS, T.CONST i, e1)), e2)) =
-              munchSW(e1, i, e2)
-          | munchStm (T.MOVE(T.MEM(T.CONST i), e)) =
-              emit(A.OPER{assem="sw `s0, " ^ imm i,
-                          src=[munchExp e], dst=[], jump=NONE})
-          | munchStm (T.MOVE(T.MEM(e1), e2)) =
-              emit(A.OPER{assem="sw `s0, (`s1)",
-                          src=[munchExp e2, munchExp e1], dst=[], jump=NONE})
-
+          | munchStm (T.MOVE(T.MEM addr, e)) = munchSW(addr, e)
+          | munchStm (T.CJUMP(oper, e1, e2, l, _)) = munchBranch(oper, e1, e2, l)
           | munchStm (T.JUMP(T.NAME l, _)) =
-              emit(A.OPER{assem="j `j0",
-                          src=[], dst=[], jump=SOME [l]})
-
+              emit(A.OPER{assem="j `j0\n", src=[], dst=[], jump=SOME [l]})
+          | munchStm (T.LABEL l) =
+              emit(A.LABEL{assem=lab l ^ ":\n", lab=l})
           | munchStm (T.EXP e) = (munchExp e; ())
+          | munchStm s = (PrintTree.printTree(TextIO.stdOut, s);
+                          impossible "bad tree (munchStm)")
 
-          | munchStm (T.LABEL lab) =
-              emit(A.LABEL{assem=Symbol.name lab ^ ":", lab=lab})
-
-          | munchStm _ = impossible "bad tree (munchStm)"
-
-        and munchExp (T.BINOP(oper, e, T.CONST i)) = munchArithi(oper, e, i)
-          | munchExp (T.BINOP(oper, T.CONST i, e)) = munchArithi(oper, e, i)
-          | munchExp (T.BINOP(oper, e1, e2)) =
-              result(fn r => emit(A.OPER
-                      {assem=opInstr oper ^ " `d0, `s0, `s1",
-                       src=[munchExp e1, munchExp e2], dst=[r], jump=NONE}))
-
+        and munchExp (T.MEM e) = result(munchLW e)
+          | munchExp (T.NAME l) = result(munchLA l)
+          | munchExp (T.CONST 0) = Frame.ZERO
+          | munchExp (T.CONST i) = result(munchLI i)
+          | munchExp (T.BINOP b) = result(munchBinop b)
           | munchExp (T.CALL(T.NAME f, args)) =
-              (emit(A.OPER{assem="jal `j0",
+              (emit(A.OPER{assem="jal `j0\n",
                            src=munchArgs(0, args),
                            dst=Frame.calldefs,
                            jump=SOME [f]});
                Frame.RV)
-
           | munchExp (T.TEMP t) = t
+          | munchExp e = (PrintTree.printTree(TextIO.stdOut, T.EXP e);
+                          impossible "bad tree (munchExp)")
 
-          | munchExp _ = impossible "bad tree (munchExp)"
+        and munchLW addr t = let
+              val (addr, src) =
+                case addr
+                  of T.BINOP(T.PLUS, e, T.CONST i) => (imm i ^ "(`s0)", [e])
+                   | T.BINOP(T.PLUS, T.CONST i, e) => (imm i ^ "(`s0)", [e])
+                   | T.CONST i => (imm i, [])
+                   | e => ("(`s0)", [e])
+              in
+                emit(A.OPER{assem="lw `d0, " ^ addr ^ "\n",
+                            src=map munchExp src, dst=[t],
+                            jump=NONE})
+              end
 
-        and munchLW (t, e, i) =
-              emit(A.OPER{assem="lw `d0, " ^ imm i ^ "(`s0)",
-                          src=[munchExp e], dst=[t], jump=NONE})
+        and munchSW (addr, e) = let
+              val (addr, src) =
+                case addr
+                  of T.BINOP(T.PLUS, e', T.CONST i) => (imm i ^ "(`s1)", [e'])
+                   | T.BINOP(T.PLUS, T.CONST i, e') => (imm i ^ "(`s1)", [e'])
+                   | T.CONST i => (imm i, [])
+                   | e' => ("(`s1)", [e'])
+              in
+                emit(A.OPER{assem="sw `s0, " ^ addr ^ "\n",
+                            src=map munchExp (e::src), dst=[],
+                            jump=NONE})
+              end
 
-        and munchLA (t, e, i) =
-              emit(A.OPER{assem="la `d0, " ^ imm i ^ "(`s0)",
-                          src=[munchExp e], dst=[t], jump=NONE})
+        and munchLA l t =
+              emit(A.OPER{assem="la `d0, " ^ lab l ^ "\n",
+                          src=[], dst=[t], jump=NONE})
 
-        and munchSW (e1, i, e2) =
-              emit(A.OPER{assem="sw `s0, " ^ imm i ^ "(`s1)",
-                          src=[munchExp e2, munchExp e1], dst=[], jump=NONE})
+        and munchLI i t =
+              emit(A.OPER{assem="li `d0, " ^ imm i ^ "\n",
+                          src=[], dst=[t], jump=NONE})
 
-        and munchArithi (oper, e, i) =
-              result(fn r => emit(A.OPER
-                      {assem=opInstr oper ^ " `d0, `s0, " ^ imm i,
-                       src=[munchExp e], dst=[r], jump=NONE}))
+        and munchBinop (oper, e1, e2) t = let
+              val (s1, src) =
+                case (e1, e2)
+                  of (T.CONST i, _) => (imm i, [])
+                   | (_, T.CONST i) => (imm i, [])
+                   | _ => ("`s1", [e2])
+              in
+                emit(A.OPER{assem=binop oper ^ " `d0, `s0, " ^ s1 ^ "\n",
+                            src=map munchExp (e1::src), dst=[t],
+                            jump=NONE})
+              end
+
+        and munchBranch (oper, e1, e2, l) = let
+              val (s1, src) =
+                case e2
+                  of T.CONST i => (imm i, [])
+                   | _ => ("`s1", [e2])
+              in
+                emit(A.OPER{assem=relop oper ^ " `s0, " ^ s1 ^ ", `j0\n",
+                            src=map munchExp (e1::src), dst=[],
+                            jump=SOME [l]})
+              end
 
         and munchArgs (n, []) = []
           | munchArgs (n, x::xs) = let

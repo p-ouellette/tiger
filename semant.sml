@@ -120,7 +120,7 @@ struct
                         if length fields <> length tyfields then
                           error pos "wrong number of fields in record expression"
                         else ();
-                        {exp=Tr.recordExp fields, ty=ty}
+                        {exp=Tr.recordExp(rev fields), ty=ty}
                       end
                   | T.ERROR => {exp=Tr.nilExp, ty=T.ERROR}
                   | _ => (error pos (S.name typ ^ " is not a record type");

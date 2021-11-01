@@ -18,13 +18,13 @@ struct
 
   fun newFrame {name, formals} = let
         fun access(escape, (acc, offset)) =
-              (if escape then
-                 (InFrame offset :: acc, offset + 4)
-               else
-                 (InReg(Temp.newtemp()) :: acc, offset))
+              if escape then
+                (InFrame offset :: acc, offset + 4)
+              else
+                (InReg(Temp.newtemp()) :: acc, offset)
         val (formals, _) = foldl access ([], 0) formals
         in {name = name,
-            formals = formals,
+            formals = rev formals,
             nlocals = ref 0}
         end
 
@@ -64,6 +64,7 @@ struct
     val SP = sp
     val FP = fp
     val RV = v0
+    val ZERO = zero
     val specialregs = [zero, v0, gp, sp, fp, ra]
     val argregs = [a0, a1, a2, a3]
     val calleesaves = [t0, t1, t2, t3, t4, t5, t6, t7, t8, t9]
@@ -95,8 +96,13 @@ struct
                        dst=[], jump=SOME []}]
 
   fun procEntryExit3 ({name,...}: frame, body) =
-        {prolog = "PROCEDURE " ^ Symbol.name name ^ "\n",
+        {prolog = "PROCEDURE " ^ Symbol.name name ^ "\n.text\n",
          body = body,
          epilog = "END " ^ Symbol.name name ^ "\n"}
+
+  fun string (lab, s) =
+        concat [".data\n", Symbol.name lab, ":\n",
+                ".word ", Int.toString(size s), "\n",
+                ".ascii \"", String.toString s, "\"\n"]
 
 end

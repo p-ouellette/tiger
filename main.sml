@@ -16,16 +16,19 @@ struct
         val _ = PrintTree.printTree(out, body)
         val _ = print "\n[canon]\n"
         val stms = Canon.linearize body
-        val stms' = Canon.traceSchedule(Canon.basicBlocks stms)
-        val _ = app (fn s => PrintTree.printTree(out, s)) stms'
+        val stms = Canon.traceSchedule(Canon.basicBlocks stms)
+        val _ = app (fn s => PrintTree.printTree(out, s)) stms
         val _ = print "\n[assem]\n"
-        val instrs = List.concat(map (Codegen.codegen frame) stms')
+        val instrs = List.concat(map (Codegen.codegen frame) stms)
+        val instrs = Frame.procEntryExit2(frame, instrs)
+        val {prolog, body, epilog} = Frame.procEntryExit3(frame, instrs)
         val format = Assem.format saytemp
-         in app (fn i => TextIO.output(out, format i)) instrs
+         in TextIO.output(out, prolog);
+            app (fn i => TextIO.output(out, format i)) body;
+            TextIO.output(out, epilog)
         end
     | emitFrag out (Frame.STRING(lab, s)) =
-        TextIO.output(out, Symbol.name lab ^ ": \"" ^ s ^ "\"")
-                           (* Frame.string(lab, s) *)
+        TextIO.output(out, Frame.string(lab, s))
 
   fun compile filename = let
         val absyn = Parse.parse filename

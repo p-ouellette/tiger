@@ -15,6 +15,7 @@ sig
   val SP : Temp.temp
   val FP : Temp.temp
   val RV : Temp.temp
+  val ZERO : Temp.temp
 
   (* Registers "trashed" by call. *)
   val calldefs : Temp.temp list
@@ -47,5 +48,10 @@ sig
   val procEntryExit3 : frame * Assem.instr list -> {prolog: string,
                                                     body: Assem.instr list,
                                                     epilog: string}
+
+  (* Returns a string containing the assembly-language instructions required to
+   * define a string literal.
+   *)
+  val string : Temp.label * string -> string
 
 end

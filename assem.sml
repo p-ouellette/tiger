@@ -26,12 +26,12 @@ struct
                 | f ( #"`":: #"`":: rest) = #"`" :: f rest
                 | f ( #"`":: _ :: rest) = ErrorMsg.impossible "bad Assem format"
                 | f (c :: rest) = (c :: f rest)
-                | f [] = [#"\n"]
+                | f [] = []
              in implode(f(explode assem))
             end
       in fn OPER{assem,dst,src,jump=NONE} => speak(assem, dst, src, nil)
           | OPER{assem,dst,src,jump=SOME j} => speak(assem, dst, src, j)
-          | LABEL{assem,...} => assem ^ "\n"
+          | LABEL{assem,...} => assem
           | MOVE{assem,dst,src} => speak(assem, [dst], [src], nil)
      end
 

@@ -19,7 +19,7 @@ sig
           | CALL of exp * exp list
 
   and binop = PLUS | MINUS | MUL | DIV
-            | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR
+            | AND | OR | XOR | LSHIFT | RSHIFT | ARSHIFT
 
   and relop = EQ | NE | LT | GT | LE | GE
             | ULT | ULE | UGT | UGE
@@ -48,7 +48,7 @@ struct
           | CALL of exp * exp list
 
   and binop = PLUS | MINUS | MUL | DIV
-            | AND | OR | LSHIFT | RSHIFT | ARSHIFT | XOR
+            | AND | OR | XOR | LSHIFT | RSHIFT | ARSHIFT
 
   and relop = EQ | NE | LT | GT | LE | GE
             | ULT | ULE | UGT | UGE
