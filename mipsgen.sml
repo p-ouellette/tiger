@@ -6,7 +6,6 @@ struct
   structure T = Tree
 
   val impossible = ErrorMsg.impossible
-  val unimplemented = ErrorMsg.unimplemented
 
   fun binop T.PLUS  = "add"
     | binop T.MINUS = "sub"
@@ -44,8 +43,7 @@ struct
           | munchStm (T.MOVE(T.TEMP t, T.CONST i)) = munchLI i t
           | munchStm (T.MOVE(T.TEMP t, T.BINOP b)) = munchBinop b t
           | munchStm (T.MOVE(T.TEMP t, e)) =
-              emit(A.OPER{assem="move `d0, `s0\n",
-                          src=[munchExp e], dst=[t], jump=NONE})
+              emit(A.MOVE{assem="move `d0, `s0\n", src=munchExp e, dst=t})
           | munchStm (T.MOVE(T.MEM addr, e)) = munchSW(addr, e)
           | munchStm (T.CJUMP(oper, e1, e2, l, _)) = munchBranch(oper, e1, e2, l)
           | munchStm (T.JUMP(T.NAME l, _)) =
