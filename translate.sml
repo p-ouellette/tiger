@@ -266,6 +266,20 @@ struct
                                  fgen(t, f)])
         end
 
+  fun ifStm (test, tstm, fstm) = let
+        val t = Temp.newlabel()
+        val f = Temp.newlabel()
+        val j = Temp.newlabel()
+        val testgen = unCx test
+         in Nx(seq [testgen(t, f),
+                    T.LABEL t,
+                    tstm,
+                    T.JUMP(T.NAME j, [j]),
+                    T.LABEL f,
+                    fstm,
+                    T.LABEL j])
+        end
+
   fun ifExp (test, Cx tgen, Ex(T.CONST 0)) = ifCondBool(test, tgen, false)
     | ifExp (test, Cx tgen, Ex(T.CONST 1)) = ifCondBool(test, tgen, true)
     | ifExp (test, Ex(T.CONST 0), Cx fgen) = ifBoolCond(test, false, fgen)
@@ -278,19 +292,9 @@ struct
                                  T.LABEL y, tgen(t, f),
                                  T.LABEL z, fgen(t, f)])
         end
-    | ifExp (test, Nx tstm, Nx fstm) = let
-        val t = Temp.newlabel()
-        val f = Temp.newlabel()
-        val j = Temp.newlabel()
-        val testgen = unCx test
-         in Nx(seq [testgen(t, f),
-                    T.LABEL t, tstm,
-                    T.JUMP(T.NAME j, [j]),
-                    T.LABEL f,
-                    fstm,
-                    T.LABEL j])
-        end
-    | ifExp (test, Ex texp, Ex fexp) = let
+    | ifExp (test, Nx tstm, fexp) = ifStm(test, tstm, unNx fexp)
+    | ifExp (test, texp, Nx fstm) = ifStm(test, unNx texp, fstm)
+    | ifExp (test, texp, fexp) = let
         val r = T.TEMP(Temp.newtemp())
         val t = Temp.newlabel()
         val f = Temp.newlabel()
@@ -298,14 +302,13 @@ struct
         val testgen = unCx test
          in Ex(T.ESEQ(seq [testgen(t, f),
                            T.LABEL t,
-                           T.MOVE(r, texp),
+                           T.MOVE(r, unEx texp),
                            T.JUMP(T.NAME j, [j]),
                            T.LABEL f,
-                           T.MOVE(r, fexp),
+                           T.MOVE(r, unEx fexp),
                            T.LABEL j],
                       r))
         end
-    | ifExp _ = impossible "bad if expression"
 
   fun whileExp (test, body, donelab) = let
         val testlab = Temp.newlabel()
