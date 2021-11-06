@@ -9,8 +9,13 @@ canon.sml
 codegen.sig
 env.sml
 errormsg.sml
+flowgraph.sml
 frame.sig
+graph.sig
+graph.sml
+liveness.sml
 main.sml
+makegraph.sml
 mipsframe.sml
 mipsgen.sml
 parse.sml

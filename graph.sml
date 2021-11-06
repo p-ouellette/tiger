@@ -58,7 +58,7 @@ struct
   fun delete(i,j::rest) = if i=j then rest else j::delete(i,rest)
     | delete(_,nil) = raise GraphEdge
 
-  fun diddle_edge change {from=(g:graph, i),to=(g':graph, j)} = 
+  fun diddleEdge change {from=(g:graph, i),to=(g':graph, j)} =
       let val _ = check(g,g')
           val NODE{succ=si,pred=pi} = A.sub(g,i)
           val _ = A.update(g,i,NODE{succ=change(j,si),pred=pi})
@@ -67,8 +67,8 @@ struct
        in ()
       end
 
-  val mk_edge = diddle_edge (op ::)
-  val rm_edge = diddle_edge delete
+  val mkEdge = diddleEdge (op ::)
+  val rmEdge = diddleEdge delete
 
   structure Table = IntMapTable(type key = node
 				fun getInt(g,n) = n)
