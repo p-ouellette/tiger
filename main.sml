@@ -21,6 +21,16 @@ struct
         val _ = print "\n[assem]\n"
         val instrs = List.concat(map (Codegen.codegen frame) stms)
         val instrs = Frame.procEntryExit2(frame, instrs)
+        val (fgraph, nodes) = MakeGraph.instrs2graph instrs
+        fun printNode n = let
+              fun nodeList nodes =
+                    "[" ^ String.concatWith "," (map Flow.Graph.nodename nodes) ^ "]"
+              val succ = nodeList (Flow.Graph.succ n)
+              val pred = nodeList (Flow.Graph.pred n)
+              val node = Flow.Graph.nodename n ^ ": succ="^succ^"\tpred="^pred^"\n"
+               in TextIO.output(out, node)
+              end
+        val _ = map printNode (rev nodes)
         val {prolog, body, epilog} = Frame.procEntryExit3(frame, instrs)
         val format = Assem.format saytemp
          in TextIO.output(out, prolog);

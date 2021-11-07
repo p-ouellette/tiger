@@ -93,7 +93,7 @@ struct
   fun procEntryExit2 (frame, body) =
         body @ [A.OPER{assem="",
                        src=specialregs @ calleesaves,
-                       dst=[], jump=SOME []}]
+                       dst=[], jump=NONE}]
 
   fun procEntryExit3 ({name,...}: frame, body) =
         {prolog = "PROCEDURE " ^ Symbol.name name ^ "\n.text\n",

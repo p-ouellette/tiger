@@ -45,7 +45,7 @@ struct
           | munchStm (T.MOVE(T.TEMP t, e)) =
               emit(A.MOVE{assem="move `d0, `s0\n", src=munchExp e, dst=t})
           | munchStm (T.MOVE(T.MEM addr, e)) = munchSW(addr, e)
-          | munchStm (T.CJUMP(oper, e1, e2, l, _)) = munchBranch(oper, e1, e2, l)
+          | munchStm (T.CJUMP b) = munchBranch b
           | munchStm (T.JUMP(T.NAME l, _)) =
               emit(A.OPER{assem="j `j0\n", src=[], dst=[], jump=SOME [l]})
           | munchStm (T.LABEL l) =
@@ -115,7 +115,7 @@ struct
                             jump=NONE})
               end
 
-        and munchBranch (oper, e1, e2, l) = let
+        and munchBranch (oper, e1, e2, t, f) = let
               val (s1, src) =
                 case e2
                   of T.CONST i => (imm i, [])
@@ -123,7 +123,7 @@ struct
               in
                 emit(A.OPER{assem=relop oper ^ " `s0, " ^ s1 ^ ", `j0\n",
                             src=map munchExp (e1::src), dst=[],
-                            jump=SOME [l]})
+                            jump=SOME [t, f]})
               end
 
         and munchArgs (n, []) = []
