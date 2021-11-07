@@ -180,15 +180,15 @@ struct
               val {exp=thenExp, ty=thenTy} = trexp then'
               val {exp=elseExp, ty=elseTy} = trexp else'
               val ty =
-                (case (thenTy, elseTy)
-                   of (T.NIL, T.RECORD _) => elseTy
-                    | (T.RECORD _, T.NIL) => thenTy
-                    | (T.ERROR, _)        => T.ERROR
-                    | (_, T.ERROR)        => T.ERROR
-                    | (a, b) =>
-                        if a = b then a else
-                          (error pos "types of if branches do not agree";
-                           T.ERROR))
+                case (thenTy, elseTy)
+                  of (T.NIL, T.RECORD _) => elseTy
+                   | (T.RECORD _, T.NIL) => thenTy
+                   | (T.ERROR, _)        => T.ERROR
+                   | (_, T.ERROR)        => T.ERROR
+                   | (a, b) =>
+                       if a = b then a
+                       else (error pos "types of if branches do not agree";
+                             T.ERROR)
               in
                 if testTy <> T.INT then
                   error pos "test expression in if is not of type int"

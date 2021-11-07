@@ -67,15 +67,15 @@ struct
 
   fun staticLink Outermost = impossible "staticLink Outermost"
     | staticLink (Inner(_,frame,_)) =
-        case Frame.formals frame
-          of [] => impossible "missing static link"
-           | x::_ => x
+        (case Frame.formals frame
+           of [] => impossible "missing static link"
+            | x::_ => x)
 
   fun formals Outermost = impossible "formals Outermost"
     | formals (l as Inner(_,frame,_)) =
-        case Frame.formals frame
-          of [] => impossible "missing static link"
-           | _::formals => map (fn a => (l,a)) formals
+        (case Frame.formals frame
+           of [] => impossible "missing static link"
+            | _::formals => map (fn a => (l,a)) formals)
 
   fun allocLocal Outermost _ = impossible "allocLocal Outermost"
     | allocLocal (l as Inner(_,frame,_)) escape =
