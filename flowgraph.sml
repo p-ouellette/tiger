@@ -1,9 +1,8 @@
 signature FLOW =
 sig
-  structure Graph : GRAPH
   datatype flowgraph = FGRAPH of {control: Graph.graph,
-                                  def: Temp.temp list Graph.Table.table,
-                                  use: Temp.temp list Graph.Table.table,
+                                  def: Temp.Set.set Graph.Table.table,
+                                  use: Temp.Set.set Graph.Table.table,
                                   ismove: bool Graph.Table.table}
 
   (* Note:  any "use" within the block is assumed to be BEFORE a "def" 
@@ -17,19 +16,16 @@ sig
            mention use(x).
 
      For any node in the graph,  
-           Graph.Table.look(def,node) = SOME(def-list)
-           Graph.Table.look(use,node) = SOME(use-list)
+           Graph.Table.look(def,node) = SOME(def-set)
+           Graph.Table.look(use,node) = SOME(use-set)
    *)
 
 end
 
 structure Flow : FLOW =
 struct
-
-  structure Graph = Graph
   datatype flowgraph = FGRAPH of {control: Graph.graph,
-                                  def: Temp.temp list Graph.Table.table,
-                                  use: Temp.temp list Graph.Table.table,
+                                  def: Temp.Set.set Graph.Table.table,
+                                  use: Temp.Set.set Graph.Table.table,
                                   ismove: bool Graph.Table.table}
-
 end

@@ -4,7 +4,6 @@ struct
   structure A = Assem
   structure T = Tree
 
-  val impossible = ErrorMsg.impossible
   val unimplemented = ErrorMsg.unimplemented
 
   (* frames *)

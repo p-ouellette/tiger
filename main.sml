@@ -21,16 +21,23 @@ struct
         val _ = print "\n[assem]\n"
         val instrs = List.concat(map (Codegen.codegen frame) stms)
         val instrs = Frame.procEntryExit2(frame, instrs)
-        val (fgraph, nodes) = MakeGraph.instrs2graph instrs
+        val Flow.FGRAPH{control,def=defMap,use=useMap,...} = MakeGraph.instrs2graph instrs
+        val nodes = Graph.nodes control
+        val (inMap, outMap) = Liveness.liveness(nodes, defMap, useMap)
         fun printNode n = let
-              fun nodeList nodes =
-                    "[" ^ String.concatWith "," (map Flow.Graph.nodename nodes) ^ "]"
-              val succ = nodeList (Flow.Graph.succ n)
-              val pred = nodeList (Flow.Graph.pred n)
-              val node = Flow.Graph.nodename n ^ ": succ="^succ^"\tpred="^pred^"\n"
+              fun listStr items = "[" ^ String.concatWith "," items ^ "]"
+              val succ = listStr (map Graph.nodename (Graph.succ n))
+              val pred = listStr (map Graph.nodename (Graph.pred n))
+              val liveIn = valOf(Graph.Table.look(inMap, n))
+              val liveOut = valOf(Graph.Table.look(outMap, n))
+              val liveIn = listStr (map saytemp (Temp.Set.toList liveIn))
+              val liveOut = listStr (map saytemp (Temp.Set.toList liveOut))
+              val node = concat [Graph.nodename n,
+                                 ": succ=", succ, "\tpred=", pred,
+                                 "\tin=", liveIn, "\tout=", liveOut, "\n"]
                in TextIO.output(out, node)
               end
-        val _ = map printNode (rev nodes)
+        val _ = app printNode nodes
         val {prolog, body, epilog} = Frame.procEntryExit3(frame, instrs)
         val format = Assem.format saytemp
          in TextIO.output(out, prolog);
