@@ -11,12 +11,12 @@ struct
   structure Table = IntMapTable(type key = int
                                 fun getInt n = n)
 
-  structure TempKey : ORD_KEY =
+  structure Key : ORD_KEY =
     struct
       type ord_key = temp
       val compare = compare
     end
-  structure Set = RedBlackSetFn(TempKey)
+  structure Set = RedBlackSetFn(Key)
 
   type label = Symbol.symbol
 
