@@ -6,7 +6,7 @@ struct
   structure Frame = MIPSFrame
 
   fun saytemp t =
-        case Temp.Table.look(Frame.tempMap, t)
+        case Temp.Table.find(Frame.tempMap, t)
           of SOME r => r
            | NONE => Temp.makestring t
 
@@ -28,8 +28,8 @@ struct
               fun listStr items = "[" ^ String.concatWith "," items ^ "]"
               val succ = listStr (map Graph.nodename (Graph.succ n))
               val pred = listStr (map Graph.nodename (Graph.pred n))
-              val liveIn = valOf(Graph.Table.look(inMap, n))
-              val liveOut = valOf(Graph.Table.look(outMap, n))
+              val liveIn = Graph.Table.lookup(inMap, n)
+              val liveOut = Graph.Table.lookup(outMap, n)
               val liveIn = listStr (map saytemp (Temp.Set.toList liveIn))
               val liveOut = listStr (map saytemp (Temp.Set.toList liveOut))
               val node = concat [Graph.nodename n,

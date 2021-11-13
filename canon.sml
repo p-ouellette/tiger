@@ -153,11 +153,11 @@ struct
    let val table = Symbol.enter(table, lab, nil)
     in case splitlast b
      of (most,T.JUMP(T.NAME lab, _)) =>
-	  (case Symbol.look(table, lab)
+	  (case Symbol.find(table, lab)
             of SOME(b' as _::_) => most @ trace(table, b', rest)
 	     | _ => b @ getnext(table,rest))
       | (most,T.CJUMP(opr,x,y,t,f)) =>
-          (case (Symbol.look(table,t), Symbol.look(table,f))
+          (case (Symbol.find(table,t), Symbol.find(table,f))
             of (_, SOME(b' as _::_)) => b @ trace(table, b', rest)
              | (SOME(b' as _::_), _) => 
 		           most @ [T.CJUMP(T.notRel opr,x,y,f,t)]
@@ -171,7 +171,7 @@ struct
      end
 
   and getnext(table,(b as (T.LABEL lab::_))::rest) = 
-           (case Symbol.look(table, lab)
+           (case Symbol.find(table, lab)
              of SOME(_::_) => trace(table,b,rest)
               | _ => getnext(table,rest))
     | getnext(table,nil) = nil

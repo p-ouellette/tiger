@@ -55,7 +55,7 @@ struct
     | actualTy ty = ty
 
   fun lookupNameTy (tenv, id, pos) =
-        (case S.look(tenv, id)
+        (case S.find(tenv, id)
            of SOME ty => ty
             | NONE => (error pos ("undefined type " ^ S.name id); T.ERROR))
 
@@ -68,7 +68,7 @@ struct
           | trexp (A.StringExp(s,_)) = {exp=Tr.stringExp(comp, s), ty=T.STRING}
 
           | trexp (A.CallExp{func,args,pos}) =
-              (case S.look(venv, func)
+              (case S.find(venv, func)
                  of SOME(E.FunEntry{level=flvl,label,formals,result}) => let
                       fun trarg(arg, ty, (exps,argn)) = let
                             val {exp, ty=argTy} = trexp arg
@@ -106,7 +106,7 @@ struct
                       fun trfield((id,exp,pos), (id',ty), exps) = let
                             val {exp, ty=expTy} = trexp exp
                             in
-                              if not(S.eq(id, id')) then
+                              if id <> id' then
                                 error pos ("expected record field " ^
                                            S.name id' ^ ", got " ^ S.name id)
                               else if not(tyMatches(expTy, actualTy ty)) then
@@ -251,7 +251,7 @@ struct
               end
 
         and trvar (A.SimpleVar(id,pos)) =
-              (case S.look(venv, id)
+              (case S.find(venv, id)
                  of SOME(E.VarEntry{access,ty}) =>
                       {exp=Tr.simpleVar(access, level), ty=actualTy ty}
                   | _ => (error pos ("undefined variable " ^ S.name id);
@@ -322,7 +322,7 @@ struct
 
     | transDec (level, break, comp) (A.TypeDec decs, {venv,tenv,exps}) = let
         fun enterHeader ({name,ty=_,pos}, tenv) =
-              (case S.look(tenv, name)
+              (case S.find(tenv, name)
                  of SOME(T.NAME(_, ref NONE)) =>
                       (error pos ("duplicate type definition: " ^ S.name name);
                        tenv)
@@ -334,7 +334,7 @@ struct
                 | illegalCycle _ = false
               val tyref =
                 case S.look(tenv', name)
-                  of SOME(T.NAME(_, ty)) => ty
+                  of T.NAME(_, ty) => ty
                    | _ => impossible "expected name type"
               val ty = transTy(tenv', ty)
               in
@@ -375,7 +375,7 @@ struct
               val params' = map trparam params
               val (level, accesses) =
                 case S.look(venv', name)
-                  of SOME(E.FunEntry{level,...}) => (level, Tr.formals level)
+                  of E.FunEntry{level,...} => (level, Tr.formals level)
                    | _ => impossible "expected function"
               fun enterParam ({name,ty}, access, venv) =
                     S.enter(venv, name, E.VarEntry{access=access, ty=ty})

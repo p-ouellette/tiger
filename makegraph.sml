@@ -49,13 +49,8 @@ struct
                               def=GT.empty, use=GT.empty, ismove=GT.empty}
         val (fgraph, nodes, labmap) = foldl addInstr (fgraph, [], S.empty) instrs
 
-        fun mkJumps {node=from, jumps=labs} = let
-              fun mkJump lab = let
-                    val to = valOf(S.look(labmap, lab))
-                     in G.mkEdge {from=from, to=to}
-                    end
-               in app mkJump labs
-              end
+        fun mkJumps {node=from, jumps=labs} =
+              app (fn l => G.mkEdge {from=from, to=S.look(labmap, l)}) labs
 
          in app mkJumps nodes;
             fgraph

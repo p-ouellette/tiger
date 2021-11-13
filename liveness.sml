@@ -32,20 +32,19 @@ struct
                                moves: (Graph.graph * Graph.node) list}
 
   fun liveness (nodes, defMap, useMap) = let
-        fun lookup m n = valOf(GT.look(m, n))
         fun initSets (n, (in_, out)) =
               (GT.enter(in_, n, TS.empty),
                GT.enter(out, n, TS.empty))
         fun doneIter (done, s, s') = done andalso TS.numItems s = TS.numItems s'
         fun liveIn (n, (inMap, outMap), done) = let
-              fun lookn m = lookup m n
-              val [in_, out, def, use] = map lookn [inMap, outMap, defMap, useMap]
+              val [in_, out, def, use] =
+                map (fn m => GT.lookup(m, n)) [inMap, outMap, defMap, useMap]
               val in' = TS.union(use, TS.difference(out, def))
                in (GT.enter(inMap, n, in'), doneIter(done, in_, in'))
               end
         fun liveOut (n, (inMap, outMap), done) = let
-              val out = lookup outMap n
-              val succIn = map (lookup inMap) (G.succ n)
+              val out = GT.lookup(outMap, n)
+              val succIn = map (fn n => GT.lookup(inMap, n)) (G.succ n)
               val out' = foldl TS.union TS.empty succIn
                in (GT.enter(outMap, n, out'), doneIter(done, out, out'))
               end

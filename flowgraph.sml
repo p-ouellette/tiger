@@ -16,8 +16,8 @@ sig
            mention use(x).
 
      For any node in the graph,  
-           Graph.Table.look(def,node) = SOME(def-set)
-           Graph.Table.look(use,node) = SOME(use-set)
+           Graph.Table.lookup(def,node) = SOME(def-set)
+           Graph.Table.lookup(use,node) = SOME(use-set)
    *)
 
 end
