@@ -60,10 +60,10 @@ struct
           | munchExp (T.CONST i) = result(munchLI i)
           | munchExp (T.BINOP b) = result(munchBinop b)
           | munchExp (T.CALL(T.NAME f, args)) =
-              (emit(A.OPER{assem="jal `j0\n",
+              (emit(A.OPER{assem="jal " ^ lab f ^ "\n",
                            src=munchArgs(0, args),
                            dst=Frame.calldefs,
-                           jump=SOME [f]});
+                           jump=NONE});
                Frame.RV)
           | munchExp (T.TEMP t) = t
           | munchExp e = (PrintTree.printTree(TextIO.stdOut, T.EXP e);

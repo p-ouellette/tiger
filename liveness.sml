@@ -2,34 +2,27 @@ signature LIVENESS =
 sig
   datatype igraph = IGRAPH of {graph: Graph.graph,
                                tnode: Temp.temp -> Graph.node,
-                               gtemp: Graph.graph -> Temp.temp,
-                               moves: (Graph.graph * Graph.node) list}
+                               gtemp: Graph.node -> Temp.temp,
+                               moves: (Graph.node * Graph.node) list}
 
-  val liveness :
-        (Graph.node list *
-         Temp.Set.set Graph.Table.table *
-         Temp.Set.set Graph.Table.table) ->
-        (Temp.Set.set Graph.Table.table * Temp.Set.set Graph.Table.table)
-
-  (*
   val interferenceGraph :
-        Flow.flowgraph -> igraph * (Flow.Graph.node -> Temp.temp list)
+        Flow.flowgraph -> igraph * (Graph.node -> Temp.Set.set)
 
-  val show : outstream * igraph -> unit
-  *)
+  val show : TextIO.outstream * igraph * (Temp.temp -> string) -> unit
 end
 
 structure Liveness : LIVENESS =
 struct
   structure F = Flow
   structure G = Graph
-  structure GT = G.Table
+  structure GT = Graph.Table
   structure TS = Temp.Set
+  structure TT = Temp.Table
 
   datatype igraph = IGRAPH of {graph: Graph.graph,
                                tnode: Temp.temp -> Graph.node,
-                               gtemp: Graph.graph -> Temp.temp,
-                               moves: (Graph.graph * Graph.node) list}
+                               gtemp: Graph.node -> Temp.temp,
+                               moves: (Graph.node * Graph.node) list}
 
   fun liveness (nodes, defMap, useMap) = let
         fun initSets (n, (in_, out)) =
@@ -58,15 +51,54 @@ struct
                in if done then maps' else iter maps'
               end
         val maps = foldl initSets (GT.empty, GT.empty) nodes
-         in iter maps
+        val (_, outMap) = iter maps
+         in outMap
         end
 
-  (*
   fun interferenceGraph (F.FGRAPH{control,def=defMap,use=useMap,ismove}) = let
-        val nodes = G.nodes control
-        val (_, outMap) = liveness(nodes, defMap, useMap)
+        val graph = G.newGraph()
+        fun addNode (t, (tnode, gtemp)) = let
+              val n = G.newNode graph
+               in (TT.enter(tnode, t, n),
+                   GT.enter(gtemp, n, t))
+              end
+        val temps = GT.foldl TS.union (GT.foldl TS.union TS.empty defMap) useMap
+        val (tnode, gtemp) = TS.foldl addNode (TT.empty, GT.empty) temps
+        val tnode = fn t => TT.lookup(tnode, t)
+        val gtemp = fn n => GT.lookup(gtemp, n)
+        val fnodes = G.nodes control
+        val outMap = liveness(fnodes, defMap, useMap)
+        fun mkEdges fnode = let
+              val [liveOut, def, use] =
+                map (fn m => GT.lookup(m, fnode)) [outMap, defMap, useMap]
+              val move = GT.lookup(ismove, fnode)
+              fun mkEdge a b =
+                    if a = b orelse move andalso b = TS.minItem use then ()
+                    else
+                      G.mkEdge {from=tnode a, to=tnode b}
+               in TS.app (fn d => TS.app (mkEdge d) liveOut) def
+              end
+        fun getMove fnode = let
+              val [dst, src] =
+                map (fn m => tnode(TS.minItem(GT.lookup(m, fnode))))
+                    [defMap, useMap]
+               in (dst, src)
+              end
+        val moveNodes = List.filter (fn n => GT.lookup(ismove, n)) fnodes
+        val moves = map getMove moveNodes
 
-         in IGRAPH{graph=, tnode=, gtemp=, moves=}
+         in app mkEdges fnodes;
+            (IGRAPH{graph=graph, tnode=tnode, gtemp=gtemp, moves=moves},
+             fn n => GT.lookup(outMap, n))
         end
-  *)
+
+  fun show (out, IGRAPH{graph,gtemp,...}, saytemp) = let
+        fun printNode n = let
+              val adj = TS.toList(TS.fromList(map gtemp (G.adj n)))
+              val adj = String.concatWith "," (map saytemp adj)
+              val line = concat [saytemp (gtemp n), ": [", adj, "]\n"]
+               in TextIO.output(out, line)
+              end
+         in app printNode (G.nodes graph)
+        end
 end
