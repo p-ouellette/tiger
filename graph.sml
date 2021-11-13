@@ -21,7 +21,7 @@ struct
   type graph = A.array
 
   type node = graph * node'
-  fun eq((_,a),(_,b)) = a=b
+  fun eq((_,a): node, (_,b): node) = a = b
 
   fun augment (g: graph) (n: node') : node = (g,n)
 
@@ -55,8 +55,8 @@ struct
   exception GraphEdge
   fun check(g,g') = (* if g=g' then () else raise GraphEdge *) ()
 
-  fun delete(i,j::rest) = if i=j then rest else j::delete(i,rest)
-    | delete(_,nil) = raise GraphEdge
+  fun delete(i: node', j::rest) = if i = j then rest else j::delete(i, rest)
+    | delete(_, nil) = raise GraphEdge
 
   fun diddleEdge change {from=(g:graph, i),to=(g':graph, j)} =
       let val _ = check(g,g')
