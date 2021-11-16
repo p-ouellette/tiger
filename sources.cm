@@ -7,6 +7,7 @@ absyn.sml
 assem.sml
 canon.sml
 codegen.sig
+color.sml
 env.sml
 errormsg.sml
 flowgraph.sml
@@ -21,6 +22,7 @@ mipsgen.sml
 parse.sml
 prabsyn.sml
 printtree.sml
+regalloc.sml
 semant.sml
 symbol.sml
 table.sig

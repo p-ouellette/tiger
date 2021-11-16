@@ -86,10 +86,10 @@ struct
               end
         val moveNodes = List.filter (fn n => GT.lookup(ismove, n)) fnodes
         val moves = map getMove moveNodes
-
-         in app mkEdges fnodes;
-            (IGRAPH{graph=graph, tnode=tnode, gtemp=gtemp, moves=moves},
-             fn n => GT.lookup(outMap, n))
+        in
+          app mkEdges fnodes;
+          (IGRAPH{graph=graph, tnode=tnode, gtemp=gtemp, moves=moves},
+           fn n => GT.lookup(outMap, n))
         end
 
   fun show (out, IGRAPH{graph,gtemp,...}, saytemp) = let
