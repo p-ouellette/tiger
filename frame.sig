@@ -10,6 +10,7 @@ sig
   val allocLocal : frame -> bool -> access
 
   type register = string
+  val registers : register list
   val tempMap : register Temp.Table.table
 
   val SP : Temp.temp

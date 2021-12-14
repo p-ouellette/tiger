@@ -20,5 +20,5 @@ struct
 
   fun color {interference=L.IGRAPH{graph,tnode,gtemp,moves},
              initial, spillCost, registers} =
-        raise Fail "unimplemented"
+        (initial, [])
 end

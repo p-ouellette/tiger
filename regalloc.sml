@@ -14,6 +14,23 @@ struct
   structure Frame = MIPSFrame
   type allocation = Frame.register Temp.Table.table
 
-  fun alloc (instrs, frame) =
-        raise Fail "unimplemented"
+  fun saytemp allocation t =
+        case Temp.Table.find(allocation, t)
+          of SOME r => r
+           | NONE => Temp.makestring t
+
+  fun alloc (instrs, frame) = let
+        val fgraph = MakeGraph.instrs2graph instrs
+        val (igraph, _) = Liveness.interferenceGraph fgraph
+        (*
+        val _ = print "\n[igraph]\n"
+        val _ = Liveness.show(TextIO.stdOut, igraph, (saytemp Frame.tempMap))
+        *)
+        val (allocation, _) =
+          Color.color {interference = igraph,
+                       initial = Frame.tempMap,
+                       spillCost = fn t => 1,
+                       registers = Frame.registers}
+         in (instrs, allocation)
+        end
 end
