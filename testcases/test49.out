@@ -1,0 +1,2 @@
+testcases/test49.tig:5.18: syntax error: inserting  PLUS
+testcases/test49.tig:5.10: undefined variable rectype

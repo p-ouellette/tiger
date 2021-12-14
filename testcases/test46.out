@@ -1,0 +1,20 @@
+.data
+
+PROCEDURE L10
+L15:
+sw $zero, -4($fp)
+lw t133, -4($fp)
+beq t133, 0, L11
+L11:
+li t132, 1
+lw t134, -4($fp)
+bne t134, 0, L12
+L13:
+li t132, 0
+L12:
+move $v0, t132
+j L14
+L14:
+END L10
+
+.text

@@ -1,0 +1,21 @@
+.data
+
+PROCEDURE L11
+L13:
+lw $v0, 4($fp)
+j L12
+L12:
+END L11
+
+PROCEDURE L10
+L15:
+sw $zero, -4($fp)
+move $a0, $fp
+li $a1, 2
+jal L11
+move $v0, $v0
+j L14
+L14:
+END L10
+
+.text

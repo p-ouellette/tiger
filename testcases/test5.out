@@ -1,0 +1,17 @@
+.data
+
+PROCEDURE L10
+L12:
+add t133, $fp, -4
+li $a0, 8
+jal allocRecord
+move t132, $v0
+sw $zero, 4(t132)
+sw $zero, 0(t132)
+sw t132, (t133)
+lw $v0, -4($fp)
+j L11
+L11:
+END L10
+
+.text

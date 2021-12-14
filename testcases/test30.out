@@ -1,0 +1,20 @@
+.data
+
+PROCEDURE L10
+L12:
+add t133, $fp, -4
+li $a0, 10
+li $a1, 0
+jal initArray
+move t132, $v0
+sw t132, (t133)
+lw t135, -4($fp)
+li t137, 2
+mul t136, t137, 2
+add t134, t135, t136
+lw $v0, (t134)
+j L11
+L11:
+END L10
+
+.text

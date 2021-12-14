@@ -1,0 +1,18 @@
+.data
+
+PROCEDURE L10
+L15:
+li t133, 10
+bgt t133, 20, L11
+L12:
+li t132, 40
+L13:
+move $v0, t132
+j L14
+L11:
+li t132, 30
+j L13
+L14:
+END L10
+
+.text

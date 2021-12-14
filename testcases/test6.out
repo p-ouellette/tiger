@@ -1,0 +1,42 @@
+.data
+
+PROCEDURE L11
+L16:
+lw $a0, 0($fp)
+lw t132, 4($fp)
+add $a1, t132, 1
+jal L12
+move $v0, $v0
+j L15
+L15:
+END L11
+
+PROCEDURE L12
+L18:
+lw $a0, 0($fp)
+lw $a1, 4($fp)
+la $a2, L13
+jal L11
+move $v0, $v0
+j L17
+L17:
+END L12
+
+PROCEDURE L10
+L20:
+move $a0, $fp
+li $a1, 0
+la $a2, L14
+jal L11
+move $v0, $v0
+j L19
+L19:
+END L10
+
+.text
+L13:
+.word 3
+.ascii "str"
+L14:
+.word 4
+.ascii "str2"

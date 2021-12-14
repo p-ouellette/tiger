@@ -37,9 +37,19 @@ struct
   fun compile filename = let
         val absyn = Parse.parse filename
         val frags = Semant.transProg absyn
+        val (procs, strs) =
+          List.partition (fn Frame.PROC _ => true | _ => false) frags
         in
-          if !ErrorMsg.anyErrors then ()
-          else app (emitFrag TextIO.stdOut) frags
+          if !ErrorMsg.anyErrors then () else let
+            val out = TextIO.stdOut
+            in
+              TextIO.output(out, ".data\n");
+              app (emitFrag out) procs;
+              TextIO.output(out, "\n.text\n");
+              app (emitFrag out) strs
+            end
         end
+
+  fun main (cmd, args) = (app compile args; 0)
 
 end

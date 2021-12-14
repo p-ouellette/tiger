@@ -30,19 +30,21 @@ struct
 
   exception Error
 
+  fun eprint s = TextIO.output(TextIO.stdErr, s)
+
   fun error pos (msg:string) = let
         fun look (a::rest, n) =
               if a < pos then
-                app print [":", Int.toString n, ".", Int.toString (pos-a)]
+                app eprint [":", Int.toString n, ".", Int.toString (pos-a)]
               else look(rest, n-1)
-          | look _ = print "0.0"
+          | look _ = eprint "0.0"
         in
           anyErrors := true;
-          print(!fileName);
+          eprint(!fileName);
           look(!linePos, !lineNum);
-          print ": ";
-          print msg;
-          print "\n"
+          eprint ": ";
+          eprint msg;
+          eprint "\n"
         end
 
   fun impossible msg =

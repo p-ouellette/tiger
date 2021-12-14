@@ -1,0 +1,2 @@
+testcases/test35.tig:5.2: wrong number of arguments to function g
+testcases/test35.tig:5.2: bad argument #1 to function g (type mismatch)

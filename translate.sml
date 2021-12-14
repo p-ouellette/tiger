@@ -87,7 +87,7 @@ struct
 
   fun newCompilation() : compilation = ref []
   fun addFrag (comp, frag) = comp := frag :: !comp
-  fun getResult comp = !comp
+  fun getResult comp = rev(!comp)
 
   (* helpers for building IR trees *)
 

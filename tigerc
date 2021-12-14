@@ -1,0 +1,2 @@
+#!/bin/sh
+sml @SMLload=tigerc.amd64-linux "$@"

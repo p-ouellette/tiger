@@ -1,0 +1,34 @@
+.data
+
+PROCEDURE L11
+L16:
+lw t135, 4($fp)
+beq t135, 0, L12
+L13:
+lw t134, 4($fp)
+lw $a0, 0($fp)
+lw t136, 4($fp)
+sub $a1, t136, 1
+jal L11
+move t133, $v0
+mul t132, t134, t133
+L14:
+move $v0, t132
+j L15
+L12:
+li t132, 1
+j L14
+L15:
+END L11
+
+PROCEDURE L10
+L18:
+move $a0, $fp
+li $a1, 10
+jal L11
+move $v0, $v0
+j L17
+L17:
+END L10
+
+.text

@@ -1,0 +1,24 @@
+.data
+
+PROCEDURE L10
+L15:
+sw $zero, -4($fp)
+sw $zero, -8($fp)
+L12:
+lw t132, -8($fp)
+blt t132, 100, L13
+L11:
+li $v0, 0
+j L14
+L13:
+lw t134, -4($fp)
+add t133, t134, 1
+sw t133, -4($fp)
+lw t136, -8($fp)
+add t135, t136, 1
+sw t135, -8($fp)
+j L12
+L14:
+END L10
+
+.text

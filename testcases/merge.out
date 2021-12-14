@@ -1,0 +1,362 @@
+.data
+
+PROCEDURE L12
+L63:
+li t132, 1
+lw t151, 0($fp)
+lw t150, 0(t151)
+lw $a0, -4(t150)
+jal L3
+move t144, $v0
+move t146, t144
+la $a0, L14
+jal L3
+move t145, $v0
+bge t146, t145, L16
+L18:
+li t132, 0
+L17:
+move $v0, t132
+j L62
+L16:
+lw t153, 0($fp)
+lw t152, 0(t153)
+lw $a0, -4(t152)
+jal L3
+move t147, $v0
+move t149, t147
+la $a0, L15
+jal L3
+move t148, $v0
+ble t149, t148, L17
+L64:
+j L18
+L62:
+END L12
+
+PROCEDURE L13
+L23:
+lw t158, 0($fp)
+lw t157, 0(t158)
+lw t156, -4(t157)
+la t159, L19
+beq t156, t159, L24
+L21:
+lw t162, 0($fp)
+lw t161, 0(t162)
+lw t160, -4(t161)
+la t163, L20
+beq t160, t163, L24
+L22:
+li $v0, 0
+j L65
+L24:
+lw t165, 0($fp)
+lw t164, 0(t165)
+add t155, t164, -4
+jal L2
+move t154, $v0
+sw t154, (t155)
+j L23
+L65:
+END L13
+
+PROCEDURE L11
+L67:
+sw $zero, -4($fp)
+move $a0, $fp
+jal L13
+lw t176, 4($fp)
+add t167, t176, 0
+move $a0, $fp
+lw t177, 0($fp)
+lw $a1, -4(t177)
+jal L12
+move t166, $v0
+sw t166, (t167)
+L27:
+move $a0, $fp
+lw t178, 0($fp)
+lw $a1, -4(t178)
+jal L12
+move t168, $v0
+beq t168, 0, L25
+L28:
+add t173, $fp, -4
+lw t179, -4($fp)
+mul t170, t179, 10
+lw t180, 0($fp)
+lw $a0, -4(t180)
+jal L3
+move t169, $v0
+add t172, t170, t169
+la $a0, L26
+jal L3
+move t171, $v0
+sub t181, t172, t171
+sw t181, (t173)
+lw t182, 0($fp)
+add t175, t182, -4
+jal L2
+move t174, $v0
+sw t174, (t175)
+j L27
+L25:
+lw $v0, -4($fp)
+j L66
+L66:
+END L11
+
+PROCEDURE L29
+L69:
+add t183, $fp, -4
+li $a0, 4
+jal allocRecord
+move t133, $v0
+sw $zero, 0(t133)
+sw t133, (t183)
+add t185, $fp, -8
+lw $a0, 0($fp)
+lw $a1, -4($fp)
+jal L11
+move t184, $v0
+sw t184, (t185)
+lw t189, -4($fp)
+lw t188, 0(t189)
+beq t188, 0, L34
+L33:
+li $a0, 8
+jal allocRecord
+move t134, $v0
+add t187, t134, 4
+lw $a0, 0($fp)
+jal L29
+move t186, $v0
+sw t186, (t187)
+lw t190, -8($fp)
+sw t190, 0(t134)
+move t135, t134
+L35:
+move $v0, t135
+j L68
+L34:
+li t135, 0
+j L35
+L68:
+END L29
+
+PROCEDURE L30
+L71:
+lw t195, 4($fp)
+beq t195, 0, L42
+L43:
+lw t196, 8($fp)
+beq t196, 0, L39
+L40:
+lw t198, 4($fp)
+lw t197, 0(t198)
+lw t200, 8($fp)
+lw t199, 0(t200)
+blt t197, t199, L36
+L37:
+li $a0, 8
+jal allocRecord
+move t137, $v0
+add t194, t137, 4
+lw $a0, 0($fp)
+lw $a1, 4($fp)
+lw t201, 8($fp)
+lw $a2, 4(t201)
+jal L30
+move t193, $v0
+sw t193, (t194)
+lw t203, 8($fp)
+lw t202, 0(t203)
+sw t202, 0(t137)
+move t138, t137
+L38:
+move t139, t138
+L41:
+move t140, t139
+L44:
+move $v0, t140
+j L70
+L42:
+lw t140, 8($fp)
+j L44
+L39:
+lw t139, 4($fp)
+j L41
+L36:
+li $a0, 8
+jal allocRecord
+move t136, $v0
+add t192, t136, 4
+lw $a0, 0($fp)
+lw t204, 4($fp)
+lw $a1, 4(t204)
+lw $a2, 8($fp)
+jal L30
+move t191, $v0
+sw t191, (t192)
+lw t206, 4($fp)
+lw t205, 0(t206)
+sw t205, 0(t136)
+move t138, t136
+j L38
+L70:
+END L30
+
+PROCEDURE L45
+L73:
+lw t210, 4($fp)
+bgt t210, 0, L47
+L48:
+li $v0, 0
+j L72
+L47:
+lw $a0, 0($fp)
+lw t211, 4($fp)
+div $a1, t211, 10
+jal L45
+lw t212, 4($fp)
+lw t215, 4($fp)
+div t214, t215, 10
+mul t213, t214, 10
+sub t209, t212, t213
+la $a0, L46
+jal L3
+move t208, $v0
+add $a0, t209, t208
+jal L4
+move t207, $v0
+move $a0, t207
+jal L0
+j L48
+L72:
+END L45
+
+PROCEDURE L31
+L75:
+lw t216, 4($fp)
+blt t216, 0, L54
+L55:
+lw t217, 4($fp)
+bgt t217, 0, L51
+L52:
+la $a0, L50
+jal L0
+move t141, $v0
+L53:
+move t142, t141
+L56:
+move $v0, t142
+j L74
+L54:
+la $a0, L49
+jal L0
+move $a0, $fp
+sub $a1, $zero, 0
+jal L45
+move t142, $v0
+j L56
+L51:
+move $a0, $fp
+lw $a1, 4($fp)
+jal L45
+move t141, $v0
+j L53
+L74:
+END L31
+
+PROCEDURE L32
+L77:
+lw t218, 4($fp)
+beq t218, 0, L59
+L60:
+lw $a0, 0($fp)
+lw t219, 4($fp)
+lw $a1, 0(t219)
+jal L31
+la $a0, L58
+jal L0
+lw $a0, 0($fp)
+lw t220, 4($fp)
+lw $a1, 4(t220)
+jal L32
+move t143, $v0
+L61:
+move $v0, t143
+j L76
+L59:
+la $a0, L57
+jal L0
+move t143, $v0
+j L61
+L76:
+END L32
+
+PROCEDURE L10
+L79:
+add t222, $fp, -4
+jal L2
+move t221, $v0
+sw t221, (t222)
+add t224, $fp, -8
+move $a0, $fp
+jal L29
+move t223, $v0
+sw t223, (t224)
+add t227, $fp, -12
+add t226, $fp, -4
+jal L2
+move t225, $v0
+sw t225, (t226)
+move $a0, $fp
+jal L29
+sw $v0, (t227)
+move t229, $fp
+move $a0, $fp
+lw $a1, -8($fp)
+lw $a2, -12($fp)
+jal L30
+move t228, $v0
+move $a0, t229
+move $a1, t228
+jal L32
+move $v0, $v0
+j L78
+L78:
+END L10
+
+.text
+L14:
+.word 1
+.ascii "0"
+L15:
+.word 1
+.ascii "9"
+L19:
+.word 1
+.ascii " "
+L20:
+.word 1
+.ascii "\n"
+L26:
+.word 1
+.ascii "0"
+L46:
+.word 1
+.ascii "0"
+L49:
+.word 1
+.ascii "-"
+L50:
+.word 1
+.ascii "0"
+L57:
+.word 1
+.ascii "\n"
+L58:
+.word 1
+.ascii " "

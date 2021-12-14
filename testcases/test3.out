@@ -1,0 +1,28 @@
+.data
+
+PROCEDURE L10
+L14:
+add t133, $fp, -4
+li $a0, 8
+jal allocRecord
+move t132, $v0
+li t134, 1000
+sw t134, 4(t132)
+la t135, L11
+sw t135, 0(t132)
+sw t132, (t133)
+la t136, L12
+lw t137, -4($fp)
+sw t136, 0(t137)
+lw $v0, -4($fp)
+j L13
+L13:
+END L10
+
+.text
+L11:
+.word 6
+.ascii "Nobody"
+L12:
+.word 8
+.ascii "Somebody"

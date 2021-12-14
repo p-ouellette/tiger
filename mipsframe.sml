@@ -95,12 +95,12 @@ struct
                        dst=[], jump=NONE}]
 
   fun procEntryExit3 ({name,...}: frame, body) =
-        {prolog = "PROCEDURE " ^ Symbol.name name ^ "\n.text\n",
+        {prolog = "PROCEDURE " ^ Symbol.name name ^ "\n",
          body = body,
          epilog = "END " ^ Symbol.name name ^ "\n"}
 
   fun string (lab, s) =
-        concat [".data\n", Symbol.name lab, ":\n",
+        concat [Symbol.name lab, ":\n",
                 ".word ", Int.toString(size s), "\n",
                 ".ascii \"", String.toString s, "\"\n"]
 

@@ -1,0 +1,34 @@
+testcases/test50.tig:2.3: unconstrained nil
+testcases/test50.tig:4.3: cannot assign valueless expression
+testcases/test50.tig:7.3: expression does not match type constraint
+testcases/test50.tig:8.24: integer required
+testcases/test50.tig:8.11: undefined type real
+testcases/test50.tig:10.12: undefined type bool
+testcases/test50.tig:15.14: undefined type real
+testcases/test50.tig:15.14: undefined type real
+testcases/test50.tig:18.17: no such field: a
+testcases/test50.tig:19.12: wrong number of fields in record expression
+testcases/test50.tig:20.32: type of record field age does not match declared type
+testcases/test50.tig:21.20: expected record field name, got title
+testcases/test50.tig:22.19: undefined type per
+testcases/test50.tig:24.12: test expression in if is not of type int
+testcases/test50.tig:24.12: then-expression must produce no value
+testcases/test50.tig:24.3: cannot assign valueless expression
+testcases/test50.tig:25.12: types of if branches do not agree
+testcases/test50.tig:27.14: undefined type intarray
+testcases/test50.tig:28.14: array size is not of type int
+testcases/test50.tig:28.14: array init expression does not match element type
+testcases/test50.tig:30.48: break outside loop
+testcases/test50.tig:33.3: illegal cycle in type declarations
+testcases/test50.tig:34.3: illegal cycle in type declarations
+testcases/test50.tig:44.4: wrong number of arguments to function substring
+testcases/test50.tig:44.4: bad argument #1 to function substring (type mismatch)
+testcases/test50.tig:44.4: bad argument #2 to function substring (type mismatch)
+testcases/test50.tig:45.4: undefined function prin
+testcases/test50.tig:47.5: integer required
+testcases/test50.tig:48.7: cannot determine type of nil
+testcases/test50.tig:49.9: type mismatch
+testcases/test50.tig:51.4: undefined variable print
+testcases/test50.tig:53.5: invalid comparison
+testcases/test50.tig:54.4: bad argument #2 to function f (type mismatch)
+testcases/test50.tig:58.4: break outside loop

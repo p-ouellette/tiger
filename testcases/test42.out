@@ -1,0 +1,137 @@
+.data
+
+PROCEDURE L10
+L21:
+add t136, $fp, -4
+li $a0, 10
+li $a1, 0
+jal initArray
+move t135, $v0
+sw t135, (t136)
+add t138, $fp, -8
+li $a0, 16
+jal allocRecord
+move t132, $v0
+sw $zero, 12(t132)
+sw $zero, 8(t132)
+la t145, L12
+sw t145, 4(t132)
+la t146, L11
+sw t146, 0(t132)
+li $a0, 5
+move $a1, t132
+jal initArray
+move t137, $v0
+sw t137, (t138)
+add t140, $fp, -12
+li $a0, 100
+la $a1, L13
+jal initArray
+move t139, $v0
+sw t139, (t140)
+add t141, $fp, -16
+li $a0, 16
+jal allocRecord
+move t133, $v0
+li t147, 44
+sw t147, 12(t133)
+li t148, 2432
+sw t148, 8(t133)
+la t149, L15
+sw t149, 4(t133)
+la t150, L14
+sw t150, 0(t133)
+sw t133, (t141)
+add t144, $fp, -20
+li $a0, 8
+jal allocRecord
+move t134, $v0
+add t143, t134, 4
+li $a0, 3
+li $a1, 1900
+jal initArray
+move t142, $v0
+sw t142, (t143)
+la t151, L16
+sw t151, 0(t134)
+sw t134, (t144)
+li t152, 1
+lw t154, -4($fp)
+mul t155, $zero, 0
+add t153, t154, t155
+sw t152, (t153)
+li t156, 3
+lw t158, -4($fp)
+li t160, 9
+mul t159, t160, 9
+add t157, t158, t159
+sw t156, (t157)
+la t161, L17
+lw t164, -8($fp)
+li t166, 3
+mul t165, t166, 3
+add t163, t164, t165
+lw t162, (t163)
+sw t161, 0(t162)
+li t167, 23
+lw t170, -8($fp)
+li t172, 1
+mul t171, t172, 1
+add t169, t170, t171
+lw t168, (t169)
+sw t167, 12(t168)
+la t173, L18
+lw t175, -12($fp)
+li t177, 34
+mul t176, t177, 34
+add t174, t175, t176
+sw t173, (t174)
+la t178, L19
+lw t179, -16($fp)
+sw t178, 0(t179)
+li t180, 2323
+lw t183, -20($fp)
+lw t182, 4(t183)
+mul t184, $zero, 0
+add t181, t182, t184
+sw t180, (t181)
+li t185, 2323
+lw t188, -20($fp)
+lw t187, 4(t188)
+li t190, 2
+mul t189, t190, 2
+add t186, t187, t189
+sw t185, (t186)
+li $v0, 0
+j L20
+L20:
+END L10
+
+.text
+L11:
+.word 5
+.ascii "aname"
+L12:
+.word 9
+.ascii "somewhere"
+L13:
+.word 0
+.ascii ""
+L14:
+.word 7
+.ascii "Kapoios"
+L15:
+.word 5
+.ascii "Kapou"
+L16:
+.word 5
+.ascii "Allos"
+L17:
+.word 4
+.ascii "kati"
+L18:
+.word 3
+.ascii "sfd"
+L19:
+.word 3
+.ascii "sdf"
